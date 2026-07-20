@@ -22,6 +22,7 @@ import Reminders from './components/Reminders';
 import AdvancedAnalytics from './components/AdvancedAnalytics';
 import ExportData from './components/ExportData';
 import WalletManager from './components/WalletManager';
+import ProfileModal from './components/ProfileModal';
 import Auth from './components/Auth';
 
 export default function App() {
@@ -35,6 +36,8 @@ export default function App() {
   const [rates, setRates] = useState({ USD: 0.000062, EUR: 0.000057, SGD: 0.000083 });
   const [currency, setCurrency] = useState('IDR');
   const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const [profile, setProfile] = useState({ payday_date: 1, email_notif: true, push_notif: true });
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
 
   useEffect(() => {
     fetch('https://open.er-api.com/v6/latest/IDR')
@@ -107,6 +110,20 @@ export default function App() {
         ];
         await supabase.from('wallets').upsert(defaultWallets);
         setWallets(defaultWallets);
+      }
+
+      // 5. Fetch profile
+      const { data: profData, error: profErr } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('user_id', userId)
+        .maybeSingle();
+      if (!profErr && profData) {
+        setProfile(profData);
+      } else {
+        const defaultProfile = { user_id: userId, payday_date: 1, email_notif: true, push_notif: true };
+        await supabase.from('profiles').upsert(defaultProfile);
+        setProfile(defaultProfile);
       }
 
     } catch (err) {
@@ -464,6 +481,17 @@ export default function App() {
               <div className="profile-divider"></div>
 
               <button 
+                onClick={() => { setShowProfileMenu(false); setIsProfileOpen(true); }} 
+                className="profile-action-btn"
+                style={{ color: 'var(--accent-color)' }}
+              >
+                <User size={14} />
+                <span>Pengaturan Profil</span>
+              </button>
+
+              <div className="profile-divider"></div>
+
+              <button 
                 onClick={() => { setShowProfileMenu(false); resetData(); }} 
                 className="profile-action-btn reset"
               >
@@ -608,6 +636,7 @@ export default function App() {
             <BudgetAndSavings 
               transactions={transactions} 
               formatIDR={formatIDR} 
+              paydayDate={profile?.payday_date || 1}
             />
           </div>
         )}
@@ -647,6 +676,15 @@ export default function App() {
           </div>
         )}
       </main>
+
+      <ProfileModal 
+        isOpen={isProfileOpen} 
+        onClose={() => setIsProfileOpen(false)} 
+        profile={profile} 
+        setProfile={setProfile} 
+        currency={currency} 
+        setCurrency={setCurrency} 
+      />
     </div>
   );
 }

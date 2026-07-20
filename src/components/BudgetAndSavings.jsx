@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
 import { PiggyBank, Target, Plus, Trash2, ArrowUpRight, ArrowDownLeft, AlertTriangle } from 'lucide-react';
 
-export default function BudgetAndSavings({ transactions, formatIDR }) {
+export default function BudgetAndSavings({ transactions, formatIDR, paydayDate = 1 }) {
   const [budgets, setBudgets] = useState([]);
   const [goals, setGoals] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -79,23 +79,32 @@ export default function BudgetAndSavings({ transactions, formatIDR }) {
     }
   };
 
-  // Calculate current month's expenses per category
+  // Calculate current month's expenses per category (adjusted to Payday Cycle)
   const currentMonthExpenses = React.useMemo(() => {
     const now = new Date();
-    const currentYear = now.getFullYear();
-    const currentMonth = now.getMonth(); // 0-11
+    
+    let cycleStart, cycleEnd;
+    const pDate = parseInt(paydayDate);
+    
+    if (now.getDate() >= pDate) {
+      cycleStart = new Date(now.getFullYear(), now.getMonth(), pDate);
+      cycleEnd = new Date(now.getFullYear(), now.getMonth() + 1, pDate - 1, 23, 59, 59);
+    } else {
+      cycleStart = new Date(now.getFullYear(), now.getMonth() - 1, pDate);
+      cycleEnd = new Date(now.getFullYear(), now.getMonth(), pDate - 1, 23, 59, 59);
+    }
 
     return transactions
       .filter(t => {
         if (t.type !== 'expense') return false;
         const d = new Date(t.date);
-        return d.getFullYear() === currentYear && d.getMonth() === currentMonth;
+        return d >= cycleStart && d <= cycleEnd;
       })
       .reduce((acc, t) => {
         acc[t.category] = (acc[t.category] || 0) + t.amount;
         return acc;
       }, {});
-  }, [transactions]);
+  }, [transactions, paydayDate]);
 
   // 2. Saving Goals Logic
   const handleAddGoal = async (e) => {

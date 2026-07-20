@@ -786,6 +786,88 @@ input:focus, select:focus, textarea:focus {
   }
 }
 
+/* Modal Dialog overlay & card */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(4px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 2000;
+  padding: 1rem;
+}
+
+.modal-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 1rem;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.8);
+  animation: modalFadeIn 0.3s ease;
+}
+
+@keyframes modalFadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Profile Modal tab items */
+.profile-tab-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  padding: 0.75rem 1rem;
+  border-radius: 0.5rem;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  width: 100%;
+  text-align: left;
+  transition: all var(--transition-speed);
+}
+
+.profile-tab-item:hover {
+  background: rgba(255, 255, 255, 0.02);
+  color: var(--text-primary);
+}
+
+.profile-tab-item.active {
+  background: rgba(139, 92, 246, 0.1);
+  color: var(--accent-color);
+  font-weight: 600;
+}
+
+@media (max-width: 576px) {
+  .profile-modal-grid {
+    grid-template-columns: 1fr !important;
+  }
+  .profile-modal-grid > div:first-child {
+    flex-direction: row !important;
+    overflow-x: auto;
+    border-right: none !important;
+    border-bottom: 1px solid var(--border-color);
+    padding: 0.5rem !important;
+  }
+  .profile-tab-item {
+    width: auto !important;
+    white-space: nowrap;
+  }
+}
+
+
 
 
 
