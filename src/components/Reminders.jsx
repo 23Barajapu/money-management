@@ -224,7 +224,7 @@ export default function Reminders({ userId, formatIDR, onAddTransaction }) {
       <div className="card">
         <h2 style={{ fontSize: '1.25rem', marginBottom: '1.25rem', fontWeight: 600 }}>Pengingat Tagihan Bulanan</h2>
         
-        <form onSubmit={handleAddBill} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr auto', gap: '0.75rem', marginBottom: '1.5rem' }}>
+        <form onSubmit={handleAddBill} className="reminder-form form-bills">
           <div className="form-group" style={{ marginBottom: 0 }}>
             <input
               type="text"
@@ -294,7 +294,7 @@ export default function Reminders({ userId, formatIDR, onAddTransaction }) {
       <div className="card">
         <h2 style={{ fontSize: '1.25rem', marginBottom: '1.25rem', fontWeight: 600 }}>Otomatisasi Transaksi Berulang</h2>
         
-        <form onSubmit={handleAddRecurring} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr auto', gap: '0.75rem', marginBottom: '1.5rem' }}>
+        <form onSubmit={handleAddRecurring} className="reminder-form form-recurring">
           <div className="form-group" style={{ marginBottom: 0 }}>
             <input
               type="text"
