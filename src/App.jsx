@@ -34,6 +34,7 @@ export default function App() {
   const [activeTab, setActiveTab] = useState('dashboard'); // 'dashboard', 'transactions', 'savings', 'installments', 'reminders', 'analytics'
   const [rates, setRates] = useState({ USD: 0.000062, EUR: 0.000057, SGD: 0.000083 });
   const [currency, setCurrency] = useState('IDR');
+  const [showProfileMenu, setShowProfileMenu] = useState(false);
 
   useEffect(() => {
     fetch('https://open.er-api.com/v6/latest/IDR')
@@ -409,35 +410,76 @@ export default function App() {
           </button>
         </nav>
 
-        <div className="sidebar-footer">
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem', padding: '0 0.5rem' }}>
-            <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }} className="hide-on-mobile">Valuta:</span>
-            <select 
-              value={currency} 
-              onChange={(e) => setCurrency(e.target.value)} 
-              className="currency-select"
-            >
-              <option value="IDR">IDR (Rp)</option>
-              <option value="USD">USD ($)</option>
-              <option value="EUR">EUR (€)</option>
-              <option value="SGD">SGD ($)</option>
-            </select>
-          </div>
+        <div className="sidebar-footer" style={{ position: 'relative' }}>
           <button 
-            onClick={resetData}
-            className="sidebar-item"
-            style={{ color: 'var(--expense-color)' }}
+            className={`sidebar-item ${showProfileMenu ? 'active' : ''}`}
+            onClick={() => setShowProfileMenu(!showProfileMenu)}
+            style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '0.75rem', background: 'transparent', border: 'none', cursor: 'pointer', textAlign: 'left' }}
           >
-            <RefreshCw size={18} />
-            <span>Reset Data</span>
+            <div style={{ 
+              width: '24px', 
+              height: '24px', 
+              borderRadius: '50%', 
+              background: 'var(--accent-color)', 
+              color: '#fff', 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'center',
+              fontWeight: 600,
+              fontSize: '0.75rem',
+              flexShrink: 0
+            }}>
+              {session?.user?.email ? session.user.email[0].toUpperCase() : 'U'}
+            </div>
+            <span className="hide-on-mobile" style={{ fontSize: '0.85rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'var(--text-primary)' }}>
+              {session?.user?.email || 'Akun Saya'}
+            </span>
           </button>
-          <button 
-            onClick={handleLogout}
-            className="sidebar-item"
-          >
-            <LogOut size={18} />
-            <span>Keluar</span>
-          </button>
+
+          {showProfileMenu && (
+            <div className="profile-dropdown">
+              <div className="profile-header">
+                <strong style={{ fontSize: '0.85rem', color: 'var(--text-primary)' }}>Akun Anda</strong>
+                <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {session?.user?.email}
+                </span>
+              </div>
+              <div className="profile-divider"></div>
+              
+              <div style={{ padding: '0.25rem 0.5rem' }}>
+                <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '0.25rem' }}>Valuta Utama</span>
+                <select 
+                  value={currency} 
+                  onChange={(e) => setCurrency(e.target.value)} 
+                  className="currency-select"
+                  style={{ width: '100%' }}
+                >
+                  <option value="IDR">IDR (Rp)</option>
+                  <option value="USD">USD ($)</option>
+                  <option value="EUR">EUR (€)</option>
+                  <option value="SGD">SGD ($)</option>
+                </select>
+              </div>
+
+              <div className="profile-divider"></div>
+
+              <button 
+                onClick={() => { setShowProfileMenu(false); resetData(); }} 
+                className="profile-action-btn reset"
+              >
+                <RefreshCw size={14} />
+                <span>Reset Data</span>
+              </button>
+
+              <button 
+                onClick={() => { setShowProfileMenu(false); handleLogout(); }} 
+                className="profile-action-btn logout"
+              >
+                <LogOut size={14} />
+                <span>Keluar</span>
+              </button>
+            </div>
+          )}
         </div>
       </aside>
 
