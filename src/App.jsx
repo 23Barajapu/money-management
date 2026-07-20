@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { 
   PiggyBank, 
   ArrowUpCircle, 
@@ -98,25 +98,28 @@ export default function App() {
     }
   };
 
-  // Calculations
-  const totalIncome = transactions
+  // Calculations (Memoized for efficiency)
+  const totalIncome = useMemo(() => transactions
     .filter(t => t.type === 'income')
-    .reduce((sum, t) => sum + t.amount, 0);
+    .reduce((sum, t) => sum + t.amount, 0), [transactions]);
 
-  const totalExpense = transactions
+  const totalExpense = useMemo(() => transactions
     .filter(t => t.type === 'expense')
-    .reduce((sum, t) => sum + t.amount, 0);
+    .reduce((sum, t) => sum + t.amount, 0), [transactions]);
 
-  const totalDeposits = transactions
+  const totalDeposits = useMemo(() => transactions
     .filter(t => t.type === 'deposit')
-    .reduce((sum, t) => sum + t.amount, 0);
+    .reduce((sum, t) => sum + t.amount, 0), [transactions]);
 
-  const totalWithdrawals = transactions
+  const totalWithdrawals = useMemo(() => transactions
     .filter(t => t.type === 'withdraw')
-    .reduce((sum, t) => sum + t.amount, 0);
+    .reduce((sum, t) => sum + t.amount, 0), [transactions]);
 
-  const balance = totalIncome - totalExpense - totalDeposits + totalWithdrawals;
-  const currentSaved = totalDeposits - totalWithdrawals;
+  const balance = useMemo(() => totalIncome - totalExpense - totalDeposits + totalWithdrawals, 
+    [totalIncome, totalExpense, totalDeposits, totalWithdrawals]);
+
+  const currentSaved = useMemo(() => totalDeposits - totalWithdrawals, 
+    [totalDeposits, totalWithdrawals]);
 
   // Sync savings currentSaved dynamically in DB if mismatched
   useEffect(() => {
@@ -286,12 +289,14 @@ export default function App() {
     return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(num);
   };
 
-  const filteredTransactions = transactions.filter(t => {
-    if (filter === 'income') return t.type === 'income';
-    if (filter === 'expense') return t.type === 'expense';
-    if (filter === 'saving') return t.type === 'deposit' || t.type === 'withdraw';
-    return true;
-  });
+  const filteredTransactions = useMemo(() => {
+    return transactions.filter(t => {
+      if (filter === 'income') return t.type === 'income';
+      if (filter === 'expense') return t.type === 'expense';
+      if (filter === 'saving') return t.type === 'deposit' || t.type === 'withdraw';
+      return true;
+    });
+  }, [transactions, filter]);
 
   if (loading) {
     return (
