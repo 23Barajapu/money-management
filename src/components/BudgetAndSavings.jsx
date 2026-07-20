@@ -29,19 +29,13 @@ export default function BudgetAndSavings({ transactions, formatIDR }) {
 
       const [budgetsRes, goalsRes] = await Promise.all([
         supabase.from('budgets').select('*').eq('user_id', user.id),
-        supabase.from('saving_goals').select('*').eq('user_id', user.id)
+        supabase.from('savings_goals').select('*').eq('user_id', user.id)
       ]);
 
       if (budgetsRes.error) throw budgetsRes.error;
-      if (goalsRes.error) {
-        // Fallback if saving_goals table is not created yet, try original savings table
-        const origRes = await supabase.from('savings').select('*').eq('user_id', user.id);
-        if (!origRes.error && origRes.data.length > 0) {
-          setGoals(origRes.data.map(g => ({ id: 'default', goal_name: g.goal_name, goal_amount: g.goal_amount, current_saved: g.current_saved })));
-        }
-      } else {
-        setGoals(goalsRes.data);
-      }
+      if (goalsRes.error) throw goalsRes.error;
+
+      setGoals(goalsRes.data || []);
       setBudgets(budgetsRes.data || []);
     } catch (error) {
       console.error('Error fetching budget/savings:', error);
@@ -119,18 +113,8 @@ export default function BudgetAndSavings({ transactions, formatIDR }) {
         current_saved: parseFloat(goalSaved || '0')
       };
 
-      // Try inserting into new saving_goals table first
-      const { error } = await supabase.from('saving_goals').insert(newGoal);
-      if (error) {
-        // Fallback to single-goal savings table
-        const { error: err2 } = await supabase.from('savings').upsert({
-          user_id: user.id,
-          goal_name: goalName,
-          goal_amount: parseFloat(goalAmount),
-          current_saved: parseFloat(goalSaved || '0')
-        });
-        if (err2) throw err2;
-      }
+      const { error } = await supabase.from('savings_goals').insert(newGoal);
+      if (error) throw error;
 
       setGoalName('');
       setGoalAmount('');
@@ -144,14 +128,8 @@ export default function BudgetAndSavings({ transactions, formatIDR }) {
   const handleUpdateSaved = async (goal, amountChange) => {
     try {
       const updatedSaved = Math.max(0, goal.current_saved + amountChange);
-      if (goal.id === 'default') {
-        const user = (await supabase.auth.getUser()).data.user;
-        const { error } = await supabase.from('savings').update({ current_saved: updatedSaved }).eq('user_id', user.id);
-        if (error) throw error;
-      } else {
-        const { error } = await supabase.from('saving_goals').update({ current_saved: updatedSaved }).eq('id', goal.id);
-        if (error) throw error;
-      }
+      const { error } = await supabase.from('savings_goals').update({ current_saved: updatedSaved }).eq('id', goal.id);
+      if (error) throw error;
       fetchData();
     } catch (error) {
       alert(error.message);
@@ -161,14 +139,8 @@ export default function BudgetAndSavings({ transactions, formatIDR }) {
   const handleDeleteGoal = async (goal) => {
     if (!confirm('Hapus target tabungan ini?')) return;
     try {
-      if (goal.id === 'default') {
-        const user = (await supabase.auth.getUser()).data.user;
-        const { error } = await supabase.from('savings').delete().eq('user_id', user.id);
-        if (error) throw error;
-      } else {
-        const { error } = await supabase.from('saving_goals').delete().eq('id', goal.id);
-        if (error) throw error;
-      }
+      const { error } = await supabase.from('savings_goals').delete().eq('id', goal.id);
+      if (error) throw error;
       fetchData();
     } catch (error) {
       alert(error.message);

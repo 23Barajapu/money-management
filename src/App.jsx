@@ -27,7 +27,6 @@ export default function App() {
   const [session, setSession] = useState(null);
   const [loading, setLoading] = useState(true);
   const [transactions, setTransactions] = useState([]);
-  const [savings, setSavings] = useState({ goalName: '', goalAmount: 0, currentSaved: 0 });
   const [installments, setInstallments] = useState([]);
   const [filter, setFilter] = useState('all');
   const [activeTab, setActiveTab] = useState('dashboard'); // 'dashboard', 'transactions', 'savings', 'installments', 'reminders', 'analytics'
@@ -78,23 +77,6 @@ export default function App() {
         .order('date', { ascending: false });
       if (txErr) throw txErr;
       setTransactions(txData || []);
-
-      // 2. Fetch savings
-      const { data: svData, error: svErr } = await supabase
-        .from('savings')
-        .select('*')
-        .eq('user_id', userId)
-        .maybeSingle();
-      if (svErr) throw svErr;
-      if (svData) {
-        setSavings({
-          goalName: svData.goal_name,
-          goalAmount: parseFloat(svData.goal_amount),
-          currentSaved: parseFloat(svData.current_saved)
-        });
-      } else {
-        setSavings({ goalName: '', goalAmount: 0, currentSaved: 0 });
-      }
 
       // 3. Fetch installments
       const { data: instData, error: instErr } = await supabase
@@ -196,30 +178,6 @@ export default function App() {
     [totalDeposits, totalWithdrawals]);
 
   // Sync savings currentSaved dynamically in DB if mismatched
-  useEffect(() => {
-    if (!session || loading) return;
-    if (savings.goalAmount > 0 && savings.currentSaved !== currentSaved) {
-      updateSavingsInDB({ ...savings, currentSaved });
-    }
-  }, [currentSaved, session]);
-
-  const updateSavingsInDB = async (updated) => {
-    const userId = session.user.id;
-    try {
-      const { error } = await supabase
-        .from('savings')
-        .upsert({
-          user_id: userId,
-          goal_name: updated.goalName,
-          goal_amount: updated.goalAmount,
-          current_saved: updated.currentSaved
-        });
-      if (error) throw error;
-      setSavings(updated);
-    } catch (err) {
-      alert('Gagal memperbarui tabungan: ' + err.message);
-    }
-  };
 
   const handleAddTransaction = async (newTx) => {
     const userId = session.user.id;
@@ -347,10 +305,9 @@ export default function App() {
       try {
         const userId = session.user.id;
         await supabase.from('transactions').delete().eq('user_id', userId);
-        await supabase.from('savings').delete().eq('user_id', userId);
+        await supabase.from('savings_goals').delete().eq('user_id', userId);
         await supabase.from('installments').delete().eq('user_id', userId);
         setTransactions([]);
-        setSavings({ goalName: '', goalAmount: 0, currentSaved: 0 });
         setInstallments([]);
       } catch (err) {
         alert('Gagal me-reset data: ' + err.message);
