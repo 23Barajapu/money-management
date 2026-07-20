@@ -479,6 +479,12 @@ input:focus, select:focus, textarea:focus {
   margin-top: auto;
   border-top: 1px solid var(--border-color);
   padding-top: 1rem;
+  display: flex;
+  flex-direction: column;
+}
+
+.sidebar-footer .sidebar-item:first-child {
+  margin-bottom: 0.5rem;
 }
 
 /* Mobile Responsiveness */
@@ -500,9 +506,7 @@ input:focus, select:focus, textarea:focus {
     align-items: center;
     border-right: none;
     border-bottom: 1px solid var(--border-color);
-    background: rgba(11, 15, 25, 0.85);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
+    background: #0b0f19; /* Solid background to prevent containing block bug in Safari iOS */
     z-index: 1000;
   }
   
@@ -578,6 +582,10 @@ input:focus, select:focus, textarea:focus {
     flex-direction: row;
   }
   
+  .sidebar-footer .sidebar-item:first-child {
+    margin-bottom: 0;
+  }
+  
   .sidebar-footer .sidebar-item span {
     display: none; /* Hide reset/logout text on mobile top header */
   }
@@ -636,76 +644,6 @@ input:focus, select:focus, textarea:focus {
 
 .animate-spin {
   animation: spin 1s linear infinite;
-}
-
-/* Print Styles */
-@media print {
-  body, #root, .app-container {
-    background: #ffffff !important;
-    color: #000000 !important;
-    padding: 0 !important;
-    margin: 0 !important;
-  }
-
-  .sidebar,
-  .bottom-nav,
-  .header-mobile,
-  .no-print,
-  button,
-  .btn-delete,
-  .btn-submit,
-  .filter-tabs {
-    display: none !important;
-  }
-
-  .main-content {
-    margin: 0 !important;
-    padding: 1cm !important;
-    width: 100% !important;
-    box-shadow: none !important;
-    background: transparent !important;
-  }
-
-  .card {
-    background: transparent !important;
-    border: 1px solid #ddd !important;
-    color: #000 !important;
-    box-shadow: none !important;
-    margin-bottom: 1.5rem !important;
-    break-inside: avoid;
-    padding: 1.5rem !important;
-  }
-
-  .dashboard-summary {
-    display: grid !important;
-    grid-template-columns: repeat(4, 1fr) !important;
-    gap: 0.75rem !important;
-    margin-bottom: 1.5rem !important;
-  }
-
-  .summary-card {
-    padding: 0.75rem !important;
-    background: transparent !important;
-    border: 1px solid #ddd !important;
-  }
-
-  .list-items {
-    max-height: none !important;
-    overflow: visible !important;
-  }
-
-  .list-item {
-    background: transparent !important;
-    border: none !important;
-    border-bottom: 1px solid #eee !important;
-    border-radius: 0 !important;
-    padding: 0.5rem 0 !important;
-    box-shadow: none !important;
-  }
-
-  .item-title, .item-meta, .item-amount {
-    color: #000 !important;
-  }
 }
 
 

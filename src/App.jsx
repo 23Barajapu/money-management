@@ -9,9 +9,7 @@ import {
   LogOut, 
   LayoutDashboard, 
   History, 
-  CreditCard,
-  FileText,
-  Printer
+  CreditCard 
 } from 'lucide-react';
 import { supabase } from './supabaseClient';
 import TransactionForm from './components/TransactionForm';
@@ -27,9 +25,7 @@ export default function App() {
   const [savings, setSavings] = useState({ goalName: '', goalAmount: 0, currentSaved: 0 });
   const [installments, setInstallments] = useState([]);
   const [filter, setFilter] = useState('all');
-  const [activeTab, setActiveTab] = useState('dashboard'); // 'dashboard', 'transactions', 'savings', 'installments', 'reports'
-  const [reportMonth, setReportMonth] = useState(new Date().getMonth() + 1); // 1-12
-  const [reportYear, setReportYear] = useState(new Date().getFullYear());
+  const [activeTab, setActiveTab] = useState('dashboard'); // 'dashboard', 'transactions', 'savings', 'installments'
 
   // Monitor Auth Session
   useEffect(() => {
@@ -177,44 +173,6 @@ export default function App() {
 
   // Total Balance
   const balance = useMemo(() => cashBalance + cashlessBalance, [cashBalance, cashlessBalance]);
-
-  // Filtered transactions for the selected month/year in reports tab
-  const monthlyTransactions = useMemo(() => {
-    return transactions.filter(t => {
-      if (!t.date) return false;
-      const tDate = new Date(t.date);
-      return (tDate.getMonth() + 1) === Number(reportMonth) && tDate.getFullYear() === Number(reportYear);
-    });
-  }, [transactions, reportMonth, reportYear]);
-
-  const monthlySummary = useMemo(() => {
-    let income = 0;
-    let expense = 0;
-    let savingsDeposit = 0;
-    let savingsWithdraw = 0;
-    const categoryTotals = {};
-
-    monthlyTransactions.forEach(t => {
-      if (t.type === 'income') {
-        income += t.amount;
-      } else if (t.type === 'expense') {
-        expense += t.amount;
-        categoryTotals[t.category] = (categoryTotals[t.category] || 0) + t.amount;
-      } else if (t.type === 'deposit') {
-        savingsDeposit += t.amount;
-      } else if (t.type === 'withdraw') {
-        savingsWithdraw += t.amount;
-      }
-    });
-
-    return {
-      income,
-      expense,
-      savingsChange: savingsDeposit - savingsWithdraw,
-      balance: income - expense - (savingsDeposit - savingsWithdraw),
-      categoryTotals
-    };
-  }, [monthlyTransactions]);
 
   const currentSaved = useMemo(() => totalDeposits - totalWithdrawals, 
     [totalDeposits, totalWithdrawals]);
@@ -451,21 +409,13 @@ export default function App() {
             <CreditCard size={18} />
             <span>Cicilan</span>
           </button>
-
-          <button 
-            className={`sidebar-item ${activeTab === 'reports' ? 'active' : ''}`}
-            onClick={() => setActiveTab('reports')}
-          >
-            <FileText size={18} />
-            <span>Laporan</span>
-          </button>
         </nav>
 
         <div className="sidebar-footer">
           <button 
             onClick={resetData}
             className="sidebar-item"
-            style={{ color: 'var(--expense-color)', marginBottom: '0.5rem' }}
+            style={{ color: 'var(--expense-color)' }}
           >
             <RefreshCw size={18} />
             <span>Reset Data</span>
@@ -609,133 +559,6 @@ export default function App() {
               onPayInstallment={handlePayInstallment}
               balance={balance}
             />
-          </div>
-        )}
-
-        {/* Tab 5: Reports */}
-        {activeTab === 'reports' && (
-          <div style={{ maxWidth: '800px', margin: '0 auto' }}>
-            <div className="card no-print" style={{ marginBottom: '1.5rem', display: 'flex', gap: '1rem', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between' }}>
-              <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', alignItems: 'center' }}>
-                <div className="form-group" style={{ marginBottom: 0, minWidth: '140px' }}>
-                  <label>Bulan</label>
-                  <select value={reportMonth} onChange={(e) => setReportMonth(e.target.value)}>
-                    <option value="1">Januari</option>
-                    <option value="2">Februari</option>
-                    <option value="3">Maret</option>
-                    <option value="4">April</option>
-                    <option value="5">Mei</option>
-                    <option value="6">Juni</option>
-                    <option value="7">Juli</option>
-                    <option value="8">Agustus</option>
-                    <option value="9">September</option>
-                    <option value="10">Oktober</option>
-                    <option value="11">November</option>
-                    <option value="12">Desember</option>
-                  </select>
-                </div>
-                <div className="form-group" style={{ marginBottom: 0, minWidth: '100px' }}>
-                  <label>Tahun</label>
-                  <select value={reportYear} onChange={(e) => setReportYear(e.target.value)}>
-                    {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - 2 + i).map(year => (
-                      <option key={year} value={year}>{year}</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-              <button 
-                onClick={() => window.print()} 
-                className="btn-submit" 
-                style={{ width: 'auto', marginTop: 0, display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.75rem 1.5rem' }}
-              >
-                <Printer size={18} />
-                Cetak Laporan
-              </button>
-            </div>
-
-            {/* Printed Report Area */}
-            <div className="card" style={{ padding: '2rem' }}>
-              <div style={{ textAlign: 'center', marginBottom: '2rem', borderBottom: '2px solid var(--border-color)', paddingBottom: '1rem' }}>
-                <h2 style={{ fontSize: '1.5rem', fontWeight: 700, margin: 0 }}>Laporan Keuangan Bulanan</h2>
-                <p style={{ color: 'var(--text-secondary)', margin: '0.5rem 0 0 0' }}>
-                  Periode: {["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"][Number(reportMonth) - 1]} {reportYear}
-                </p>
-              </div>
-
-              {/* Summary Metrics */}
-              <div className="dashboard-summary" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', marginBottom: '2rem' }}>
-                <div className="card summary-card" style={{ background: 'rgba(16, 185, 129, 0.05)', borderColor: 'rgba(16, 185, 129, 0.2)' }}>
-                  <span className="summary-label">Total Pemasukan</span>
-                  <span className="summary-value income" style={{ fontSize: '1.25rem' }}>{formatIDR(monthlySummary.income)}</span>
-                </div>
-                <div className="card summary-card" style={{ background: 'rgba(239, 68, 68, 0.05)', borderColor: 'rgba(239, 68, 68, 0.2)' }}>
-                  <span className="summary-label">Total Pengeluaran</span>
-                  <span className="summary-value expense" style={{ fontSize: '1.25rem' }}>{formatIDR(monthlySummary.expense)}</span>
-                </div>
-                <div className="card summary-card" style={{ background: 'rgba(6, 182, 212, 0.05)', borderColor: 'rgba(6, 182, 212, 0.2)' }}>
-                  <span className="summary-label">Mutasi Tabungan</span>
-                  <span className="summary-value saving" style={{ fontSize: '1.25rem', color: 'var(--saving-color)' }}>{formatIDR(monthlySummary.savingsChange)}</span>
-                </div>
-                <div className="card summary-card" style={{ background: monthlySummary.balance >= 0 ? 'rgba(16, 185, 129, 0.05)' : 'rgba(239, 68, 68, 0.05)', borderColor: monthlySummary.balance >= 0 ? 'rgba(16, 185, 129, 0.2)' : 'rgba(239, 68, 68, 0.2)' }}>
-                  <span className="summary-label">Alur Kas Bersih</span>
-                  <span className={`summary-value ${monthlySummary.balance >= 0 ? 'income' : 'expense'}`} style={{ fontSize: '1.25rem' }}>
-                    {formatIDR(monthlySummary.balance)}
-                  </span>
-                </div>
-              </div>
-
-              {/* Category breakdown */}
-              <div style={{ marginBottom: '2rem' }}>
-                <h3 style={{ fontSize: '1.1rem', fontWeight: 600, marginBottom: '1rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem' }}>
-                  Rincian Pengeluaran per Kategori
-                </h3>
-                {Object.keys(monthlySummary.categoryTotals).length === 0 ? (
-                  <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>Tidak ada pengeluaran di bulan ini.</p>
-                ) : (
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
-                    {Object.entries(monthlySummary.categoryTotals).map(([cat, total]) => (
-                      <div key={cat} style={{ display: 'flex', justifyContent: 'space-between', padding: '0.5rem', background: 'rgba(255,255,255,0.02)', borderRadius: '0.25rem', border: '1px solid var(--border-color)', fontSize: '0.9rem' }}>
-                        <span>{cat}</span>
-                        <span style={{ fontWeight: 600 }}>{formatIDR(total)}</span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              {/* Transactions List */}
-              <div>
-                <h3 style={{ fontSize: '1.1rem', fontWeight: 600, marginBottom: '1rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem' }}>
-                  Daftar Transaksi Bulanan
-                </h3>
-                {monthlyTransactions.length === 0 ? (
-                  <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>Belum ada catatan keuangan di bulan ini.</p>
-                ) : (
-                  <div className="list-items" style={{ background: 'transparent', maxHeight: 'none', overflowY: 'visible' }}>
-                    {monthlyTransactions.map(tx => (
-                      <div key={tx.id} className="list-item" style={{ borderBottom: '1px solid var(--border-color)', padding: '0.75rem 0', borderRadius: 0 }}>
-                        <div className="item-info">
-                          <span className="item-title" style={{ fontSize: '0.9rem' }}>{tx.title}</span>
-                          <span className="item-meta" style={{ fontSize: '0.75rem' }}>
-                            {tx.category} • {tx.payment_method === 'cashless' ? (tx.type === 'transfer' ? 'Cashless → Cash' : 'Cashless') : (tx.type === 'transfer' ? 'Cash → Cashless' : 'Cash')} • {tx.date}
-                          </span>
-                        </div>
-                        <div className="item-amount-action">
-                          <span className={`item-amount ${
-                            tx.type === 'income' ? 'income' : 
-                            tx.type === 'expense' ? 'expense' : 
-                            tx.type === 'deposit' ? 'expense' : 
-                            tx.type === 'transfer' ? 'saving' : 'income'
-                          }`} style={{ fontSize: '0.9rem' }}>
-                            {tx.type === 'income' || tx.type === 'withdraw' ? '+' : tx.type === 'transfer' ? '⇄' : '-'} {formatIDR(tx.amount)}
-                          </span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
           </div>
         )}
       </main>
