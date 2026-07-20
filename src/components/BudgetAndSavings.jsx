@@ -176,7 +176,7 @@ export default function BudgetAndSavings({ userId, transactions, formatIDR }) {
     const currentMonth = new Date().toISOString().slice(0, 7); // 'YYYY-MM'
     const expenses = {};
     transactions
-      .filter(t => t.type === 'expense' && t.date.startsWith(currentMonth))
+      .filter(t => t.type === 'expense' && t.date && t.date.startsWith(currentMonth))
       .forEach(t => {
         expenses[t.category] = (expenses[t.category] || 0) + t.amount;
       });
