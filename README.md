@@ -1,11 +1,16 @@
 # Money Management 💰
 
-Aplikasi web manajemen keuangan premium berbasis **React + Vite** yang terintegrasi dengan **Supabase Cloud Database & Auth** untuk sinkronisasi multi-device real-time. Didesain dengan estetika modern menggunakan konsep *Glassmorphism* dan mode gelap yang ramah pengguna.
+Aplikasi web manajemen keuangan premium berbasis **React + Vite** yang terintegrasi dengan **Supabase Cloud Database & Auth** untuk sinkronisasi multi-device real-time. Didesain dengan estetika modern menggunakan konsep *Glassmorphism* dan navigasi responsif yang ramah pengguna mobile.
+
+---
 
 ## 🚀 Fitur Utama
 
-- **📊 Dashboard Interaktif**: Grafik visual dinamis (Doughnut & Bar Chart) menggunakan Chart.js untuk menganalisis alur kas dan kategori pengeluaran.
-- **💸 Pelacakan Transaksi**: Input manual pemasukan, pengeluaran, dan penyesuaian tabungan yang langsung tercatat di riwayat ledger.
+- **📊 Dashboard Keuangan Lengkap**: 
+  - Grafik visual dinamis (Doughnut & Bar Chart) menggunakan Chart.js untuk menganalisis alur kas dan kategori pengeluaran.
+  - Pemisahan 3 jenis saldo di dashboard: **Total Saldo** (Seluruh uang), **Saldo Cash** (Uang tunai), dan **Saldo Cashless** (Uang digital/transfer).
+- **💸 Pencatatan Multi-Metode**: Input transaksi pemasukan & pengeluaran dengan penentuan metode pembayaran (Cash atau Cashless).
+- **🔄 Mutasi & Transfer Saldo**: Fitur pemindahan uang dari **Cash ke Cashless** atau **Cashless ke Cash** secara real-time yang memutasi saldo secara presisi tanpa memengaruhi Total Saldo utama.
 - **🐷 Target Tabungan**: Menentukan tujuan keuangan, melacak persentase pencapaian target, dan melakukan simulasi setor/tarik saldo tabungan.
 - **💳 Manajemen Cicilan**: Melacak sisa cicilan/utang, menginput jangka waktu tenor (bulan), dan menghitung otomatis total kewajiban serta opsi pembayaran kustom/bulanan.
 - **🔐 Cloud Sync & Auth**: Sistem masuk akun aman menggunakan email/password maupun **Google Sign-In (OAuth)** dengan kebijakan keamanan Row Level Security (RLS) di Supabase.
@@ -43,11 +48,12 @@ Buat tabel-tabel berikut di **SQL Editor** pada Supabase Dashboard Anda:
 create table transactions (
   id text primary key,
   user_id uuid references auth.users(id) on delete cascade,
-  type text not null,
+  type text not null, -- 'income', 'expense', 'deposit', 'withdraw', 'transfer'
   title text not null,
   amount numeric not null,
   category text not null,
   date date not null,
+  payment_method text default 'cash', -- 'cash', 'cashless'
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
