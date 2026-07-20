@@ -9,7 +9,9 @@ import {
   LogOut, 
   LayoutDashboard, 
   History, 
-  CreditCard 
+  CreditCard,
+  Calendar,
+  TrendingUp
 } from 'lucide-react';
 import { supabase } from './supabaseClient';
 import TransactionForm from './components/TransactionForm';
@@ -17,6 +19,9 @@ import SavingsTracker from './components/SavingsTracker';
 import DashboardCharts from './components/DashboardCharts';
 import InstallmentTracker from './components/InstallmentTracker';
 import Auth from './components/Auth';
+import BudgetAndSavings from './components/BudgetAndSavings';
+import Reminders from './components/Reminders';
+import AdvancedAnalytics from './components/AdvancedAnalytics';
 
 export default function App() {
   const [session, setSession] = useState(null);
@@ -395,11 +400,11 @@ export default function App() {
           </button>
 
           <button 
-            className={`sidebar-item ${activeTab === 'savings' ? 'active' : ''}`}
-            onClick={() => setActiveTab('savings')}
+            className={`sidebar-item ${activeTab === 'savings_budget' ? 'active' : ''}`}
+            onClick={() => setActiveTab('savings_budget')}
           >
             <PiggyBank size={18} />
-            <span>Tabungan</span>
+            <span>Anggaran & Target</span>
           </button>
 
           <button 
@@ -408,6 +413,22 @@ export default function App() {
           >
             <CreditCard size={18} />
             <span>Cicilan</span>
+          </button>
+
+          <button 
+            className={`sidebar-item ${activeTab === 'reminders' ? 'active' : ''}`}
+            onClick={() => setActiveTab('reminders')}
+          >
+            <Calendar size={18} />
+            <span>Pengingat</span>
+          </button>
+
+          <button 
+            className={`sidebar-item ${activeTab === 'reports' ? 'active' : ''}`}
+            onClick={() => setActiveTab('reports')}
+          >
+            <TrendingUp size={18} />
+            <span>Laporan</span>
           </button>
         </nav>
 
@@ -538,13 +559,13 @@ export default function App() {
           </div>
         )}
 
-        {/* Tab 3: Savings */}
-        {activeTab === 'savings' && (
-          <div style={{ maxWidth: '600px', margin: '0 auto' }}>
-            <SavingsTracker 
-              savings={savings} 
-              onUpdateSavings={handleUpdateSavings} 
-              balance={balance} 
+        {/* Tab 3: Budget & Savings */}
+        {activeTab === 'savings_budget' && (
+          <div style={{ maxWidth: '700px', margin: '0 auto' }}>
+            <BudgetAndSavings
+              userId={session.user.id}
+              transactions={transactions}
+              formatIDR={formatIDR}
             />
           </div>
         )}
@@ -558,6 +579,31 @@ export default function App() {
               onDeleteInstallment={handleDeleteInstallment}
               onPayInstallment={handlePayInstallment}
               balance={balance}
+            />
+          </div>
+        )}
+
+        {/* Tab 5: Reminders & Automation */}
+        {activeTab === 'reminders' && (
+          <div style={{ maxWidth: '700px', margin: '0 auto' }}>
+            <Reminders
+              userId={session.user.id}
+              formatIDR={formatIDR}
+              onAddTransaction={handleAddTransaction}
+            />
+          </div>
+        )}
+
+        {/* Tab 6: Reports & Analytics */}
+        {activeTab === 'reports' && (
+          <div style={{ maxWidth: '800px', margin: '0 auto' }}>
+            <AdvancedAnalytics
+              userId={session.user.id}
+              transactions={transactions}
+              cashBalance={cashBalance}
+              cashlessBalance={cashlessBalance}
+              balance={balance}
+              formatIDR={formatIDR}
             />
           </div>
         )}
