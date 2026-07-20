@@ -3,25 +3,27 @@ import { CreditCard, Plus, Trash2, CheckCircle } from 'lucide-react';
 
 export default function InstallmentTracker({ installments, onAddInstallment, onDeleteInstallment, onPayInstallment, balance }) {
   const [name, setName] = useState('');
-  const [totalAmount, setTotalAmount] = useState('');
+  const [months, setMonths] = useState('');
   const [monthlyPayment, setMonthlyPayment] = useState('');
   const [showAddForm, setShowAddForm] = useState(false);
   const [customPayAmount, setCustomPayAmount] = useState({});
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (!name || !totalAmount || !monthlyPayment) return;
+    if (!name || !months || !monthlyPayment) return;
+
+    const calculatedTotal = parseFloat(monthlyPayment) * parseInt(months);
 
     onAddInstallment({
       id: Date.now().toString(),
       name,
-      totalAmount: parseFloat(totalAmount),
+      totalAmount: calculatedTotal,
       paidAmount: 0,
       monthlyPayment: parseFloat(monthlyPayment),
     });
 
     setName('');
-    setTotalAmount('');
+    setMonths('');
     setMonthlyPayment('');
     setShowAddForm(false);
   };
@@ -79,23 +81,23 @@ export default function InstallmentTracker({ installments, onAddInstallment, onD
             />
           </div>
           <div className="form-group">
-            <label>Total Nominal Utang (Rp)</label>
-            <input
-              type="number"
-              placeholder="e.g. 15000000"
-              value={totalAmount}
-              onChange={(e) => setTotalAmount(e.target.value)}
-              required
-              min="1"
-            />
-          </div>
-          <div className="form-group">
             <label>Cicilan per Bulan (Rp)</label>
             <input
               type="number"
               placeholder="e.g. 500000"
               value={monthlyPayment}
               onChange={(e) => setMonthlyPayment(e.target.value)}
+              required
+              min="1"
+            />
+          </div>
+          <div className="form-group">
+            <label>Lama Cicilan (Bulan)</label>
+            <input
+              type="number"
+              placeholder="e.g. 12"
+              value={months}
+              onChange={(e) => setMonths(e.target.value)}
               required
               min="1"
             />
