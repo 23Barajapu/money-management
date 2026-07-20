@@ -15,13 +15,13 @@ import {
 } from 'lucide-react';
 import { supabase } from './supabaseClient';
 import TransactionForm from './components/TransactionForm';
-import SavingsTracker from './components/SavingsTracker';
 import DashboardCharts from './components/DashboardCharts';
 import InstallmentTracker from './components/InstallmentTracker';
-import Auth from './components/Auth';
 import BudgetAndSavings from './components/BudgetAndSavings';
 import Reminders from './components/Reminders';
 import AdvancedAnalytics from './components/AdvancedAnalytics';
+import ExportData from './components/ExportData';
+import Auth from './components/Auth';
 
 export default function App() {
   const [session, setSession] = useState(null);
@@ -30,7 +30,20 @@ export default function App() {
   const [savings, setSavings] = useState({ goalName: '', goalAmount: 0, currentSaved: 0 });
   const [installments, setInstallments] = useState([]);
   const [filter, setFilter] = useState('all');
-  const [activeTab, setActiveTab] = useState('dashboard'); // 'dashboard', 'transactions', 'savings', 'installments'
+  const [activeTab, setActiveTab] = useState('dashboard'); // 'dashboard', 'transactions', 'savings', 'installments', 'reminders', 'analytics'
+  const [rates, setRates] = useState({ USD: 0.000062, EUR: 0.000057, SGD: 0.000083 });
+  const [currency, setCurrency] = useState('IDR');
+
+  useEffect(() => {
+    fetch('https://open.er-api.com/v6/latest/IDR')
+      .then(res => res.json())
+      .then(data => {
+        if (data && data.rates) {
+          setRates(data.rates);
+        }
+      })
+      .catch(err => console.error('Error fetching currency rates:', err));
+  }, []);
 
   // Monitor Auth Session
   useEffect(() => {
@@ -350,7 +363,12 @@ export default function App() {
   };
 
   const formatIDR = (num) => {
-    return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(num);
+    if (currency === 'IDR') {
+      return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(num);
+    } else {
+      const converted = (num || 0) * (rates[currency] || 1);
+      return new Intl.NumberFormat('en-US', { style: 'currency', currency: currency, maximumFractionDigits: 2 }).format(converted);
+    }
   };
 
   const filteredTransactions = useMemo(() => {
@@ -400,11 +418,19 @@ export default function App() {
           </button>
 
           <button 
-            className={`sidebar-item ${activeTab === 'savings_budget' ? 'active' : ''}`}
-            onClick={() => setActiveTab('savings_budget')}
+            className={`sidebar-item ${activeTab === 'savings' ? 'active' : ''}`}
+            onClick={() => setActiveTab('savings')}
           >
             <PiggyBank size={18} />
-            <span>Anggaran & Target</span>
+            <span>Anggaran & Tabungan</span>
+          </button>
+
+          <button 
+            className={`sidebar-item ${activeTab === 'reminders' ? 'active' : ''}`}
+            onClick={() => setActiveTab('reminders')}
+          >
+            <Calendar size={18} />
+            <span>Tagihan</span>
           </button>
 
           <button 
@@ -416,23 +442,28 @@ export default function App() {
           </button>
 
           <button 
-            className={`sidebar-item ${activeTab === 'reminders' ? 'active' : ''}`}
-            onClick={() => setActiveTab('reminders')}
-          >
-            <Calendar size={18} />
-            <span>Pengingat</span>
-          </button>
-
-          <button 
-            className={`sidebar-item ${activeTab === 'reports' ? 'active' : ''}`}
-            onClick={() => setActiveTab('reports')}
+            className={`sidebar-item ${activeTab === 'analytics' ? 'active' : ''}`}
+            onClick={() => setActiveTab('analytics')}
           >
             <TrendingUp size={18} />
-            <span>Laporan</span>
+            <span>Analisis & Ekspor</span>
           </button>
         </nav>
 
         <div className="sidebar-footer">
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem', padding: '0 0.5rem' }}>
+            <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }} className="hide-on-mobile">Valuta:</span>
+            <select 
+              value={currency} 
+              onChange={(e) => setCurrency(e.target.value)} 
+              className="currency-select"
+            >
+              <option value="IDR">IDR (Rp)</option>
+              <option value="USD">USD ($)</option>
+              <option value="EUR">EUR (€)</option>
+              <option value="SGD">SGD ($)</option>
+            </select>
+          </div>
           <button 
             onClick={resetData}
             className="sidebar-item"
@@ -559,13 +590,12 @@ export default function App() {
           </div>
         )}
 
-        {/* Tab 3: Budget & Savings */}
-        {activeTab === 'savings_budget' && (
-          <div style={{ maxWidth: '700px', margin: '0 auto' }}>
-            <BudgetAndSavings
-              userId={session.user.id}
-              transactions={transactions}
-              formatIDR={formatIDR}
+        {/* Tab 3: Savings & Budgets */}
+        {activeTab === 'savings' && (
+          <div style={{ maxWidth: '800px', margin: '0 auto' }}>
+            <BudgetAndSavings 
+              transactions={transactions} 
+              formatIDR={formatIDR} 
             />
           </div>
         )}
@@ -583,27 +613,30 @@ export default function App() {
           </div>
         )}
 
-        {/* Tab 5: Reminders & Automation */}
+        {/* Tab 5: Tagihan & Otomatisasi */}
         {activeTab === 'reminders' && (
-          <div style={{ maxWidth: '700px', margin: '0 auto' }}>
-            <Reminders
-              userId={session.user.id}
-              formatIDR={formatIDR}
-              onAddTransaction={handleAddTransaction}
+          <div style={{ maxWidth: '800px', margin: '0 auto' }}>
+            <Reminders 
+              onAddTransaction={handleAddTransaction} 
+              formatIDR={formatIDR} 
             />
           </div>
         )}
 
-        {/* Tab 6: Reports & Analytics */}
-        {activeTab === 'reports' && (
-          <div style={{ maxWidth: '800px', margin: '0 auto' }}>
-            <AdvancedAnalytics
-              userId={session.user.id}
-              transactions={transactions}
-              cashBalance={cashBalance}
-              cashlessBalance={cashlessBalance}
-              balance={balance}
-              formatIDR={formatIDR}
+        {/* Tab 6: Analisis & Ekspor */}
+        {activeTab === 'analytics' && (
+          <div style={{ maxWidth: '900px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+            <AdvancedAnalytics 
+              transactions={transactions} 
+              balance={balance} 
+              formatIDR={formatIDR} 
+            />
+            <ExportData 
+              transactions={transactions} 
+              balance={balance} 
+              cashBalance={cashBalance} 
+              cashlessBalance={cashlessBalance} 
+              formatIDR={formatIDR} 
             />
           </div>
         )}

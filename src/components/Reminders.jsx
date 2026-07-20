@@ -1,286 +1,271 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
-import { Calendar, Plus, Trash2, CheckCircle, Bell, RefreshCw } from 'lucide-react';
+import { Calendar, Bell, Plus, Trash2, CheckCircle2, Clock, Play } from 'lucide-react';
 
-export default function Reminders({ userId, formatIDR, onAddTransaction }) {
-  // Recurring States
-  const [recurring, setRecurring] = useState([]);
+export default function Reminders({ onAddTransaction, formatIDR }) {
+  const [recurrings, setRecurrings] = useState([]);
+  const [bills, setBills] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  // Form states - Recurring
   const [recType, setRecType] = useState('expense');
   const [recTitle, setRecTitle] = useState('');
   const [recAmount, setRecAmount] = useState('');
   const [recCategory, setRecCategory] = useState('Lainnya');
   const [recMethod, setRecMethod] = useState('cash');
-  const [recInterval, setRecInterval] = useState('monthly'); // daily, weekly, monthly
-  const [recLoading, setRecLoading] = useState(false);
+  const [recInterval, setRecInterval] = useState('monthly');
 
-  // Bill States
-  const [bills, setBills] = useState([]);
+  // Form states - Bills
   const [billName, setBillName] = useState('');
   const [billAmount, setBillAmount] = useState('');
   const [billDueDate, setBillDueDate] = useState('');
-  const [billLoading, setBillLoading] = useState(false);
 
-  // Form categories
-  const categories = {
-    income: ['Gaji', 'Investasi', 'Hibah', 'Lainnya'],
-    expense: ['Makanan', 'Transportasi', 'Hiburan', 'Belanja', 'Tagihan', 'Investasi', 'Lainnya']
-  };
+  const categories = ['Makanan', 'Transportasi', 'Hiburan', 'Belanja', 'Kesehatan', 'Edukasi', 'Lainnya'];
 
   useEffect(() => {
-    fetchRecurring();
-    fetchBills();
+    fetchData();
   }, []);
 
-  const fetchRecurring = async () => {
+  const fetchData = async () => {
     try {
-      const { data, error } = await supabase.from('recurring_transactions').select('*');
-      if (error) throw error;
-      setRecurring(data || []);
-      // Check and trigger scheduler once data is fetched
-      if (data && data.length > 0) {
-        checkAndTriggerRecurring(data);
-      }
-    } catch (err) {
-      console.error('Error fetching recurring:', err.message);
-    }
-  };
+      setLoading(true);
+      const user = (await supabase.auth.getUser()).data.user;
+      if (!user) return;
 
-  const fetchBills = async () => {
-    try {
-      const { data, error } = await supabase.from('bills').select('*').order('due_date', { ascending: true });
-      if (error) throw error;
-      setBills(data || []);
-    } catch (err) {
-      console.error('Error fetching bills:', err.message);
+      const [recRes, billsRes] = await Promise.all([
+        supabase.from('recurring_transactions').select('*').eq('user_id', user.id),
+        supabase.from('bills').select('*').eq('user_id', user.id).order('due_date', { ascending: true })
+      ]);
+
+      if (recRes.error) throw recRes.error;
+      if (billsRes.error) throw billsRes.error;
+
+      setRecurrings(recRes.data || []);
+      setBills(billsRes.data || []);
+
+      // Trigger automatic recurring checking on load
+      checkAndTriggerRecurring(recRes.data || [], user.id);
+    } catch (error) {
+      console.error('Error fetching reminders:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
   // Automated Scheduler logic
-  const checkAndTriggerRecurring = async (recurringItems) => {
-    const todayStr = new Date().toISOString().split('T')[0];
-    const today = new Date(todayStr);
+  const checkAndTriggerRecurring = async (recurringList, userId) => {
+    const today = new Date();
+    const todayStr = today.toISOString().split('T')[0];
 
-    for (const item of recurringItems) {
-      const lastTriggered = new Date(item.last_triggered);
-      let diffTime = Math.abs(today - lastTriggered);
-      let diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
+    for (const item of recurringList) {
+      const lastDate = new Date(item.last_triggered);
+      let diffDays = Math.floor((today - lastDate) / (1000 * 60 * 60 * 24));
       let shouldTrigger = false;
-      if (item.interval === 'daily' && diffDays >= 1) shouldTrigger = true;
-      if (item.interval === 'weekly' && diffDays >= 7) shouldTrigger = true;
-      if (item.interval === 'monthly' && diffDays >= 30) shouldTrigger = true; // standard 30 days check
 
-      if (shouldTrigger && todayStr !== item.last_triggered) {
+      if (item.interval === 'daily' && diffDays >= 1) {
+        shouldTrigger = true;
+      } else if (item.interval === 'weekly' && diffDays >= 7) {
+        shouldTrigger = true;
+      } else if (item.interval === 'monthly' && diffDays >= 30) {
+        // Simple monthly check
+        shouldTrigger = true;
+      }
+
+      if (shouldTrigger) {
         try {
-          // 1. Insert transaction
-          const { error: txErr } = await supabase.from('transactions').insert({
-            id: Date.now().toString() + '_' + Math.random().toString(36).substr(2, 5),
+          // 1. Insert into transactions
+          const newTx = {
+            id: Date.now().toString() + Math.random().toString(36).substr(2, 5),
             user_id: userId,
             type: item.type,
-            title: `[Auto] ${item.title}`,
+            title: `${item.title} (Otomatis)`,
             amount: parseFloat(item.amount),
             category: item.category,
             date: todayStr,
             payment_method: item.payment_method
-          });
-          if (txErr) throw txErr;
+          };
+
+          // Call onAddTransaction parent function to trigger UI sync/insert
+          await onAddTransaction(newTx);
 
           // 2. Update last_triggered in recurring_transactions
           await supabase
             .from('recurring_transactions')
             .update({ last_triggered: todayStr })
             .eq('id', item.id);
+
         } catch (err) {
-          console.error('Auto scheduler failed for item:', item.title, err.message);
+          console.error('Error triggering recurring item:', item.title, err);
         }
       }
     }
   };
 
-  // Add Recurring
   const handleAddRecurring = async (e) => {
     e.preventDefault();
     if (!recTitle || !recAmount) return;
-    setRecLoading(true);
-
-    const newItem = {
-      id: Date.now().toString(),
-      user_id: userId,
-      type: recType,
-      title: recTitle,
-      amount: parseFloat(recAmount),
-      category: recCategory,
-      payment_method: recMethod,
-      interval: recInterval,
-      last_triggered: new Date().toISOString().split('T')[0]
-    };
-
     try {
-      const { error } = await supabase.from('recurring_transactions').insert(newItem);
+      const user = (await supabase.auth.getUser()).data.user;
+      if (!user) return;
+
+      const newRec = {
+        id: Date.now().toString(),
+        user_id: user.id,
+        type: recType,
+        title: recTitle,
+        amount: parseFloat(recAmount),
+        category: recCategory,
+        payment_method: recMethod,
+        interval: recInterval,
+        last_triggered: new Date().toISOString().split('T')[0]
+      };
+
+      const { error } = await supabase.from('recurring_transactions').insert(newRec);
       if (error) throw error;
+
       setRecTitle('');
       setRecAmount('');
-      fetchRecurring();
-    } catch (err) {
-      alert('Gagal membuat transaksi berulang: ' + err.message);
-    } finally {
-      setRecLoading(false);
+      fetchData();
+    } catch (error) {
+      alert(error.message);
     }
   };
 
-  // Delete Recurring
   const handleDeleteRecurring = async (id) => {
     try {
       const { error } = await supabase.from('recurring_transactions').delete().eq('id', id);
       if (error) throw error;
-      fetchRecurring();
-    } catch (err) {
-      alert('Gagal menghapus transaksi berulang: ' + err.message);
+      fetchData();
+    } catch (error) {
+      alert(error.message);
     }
   };
 
-  // Add Bill
   const handleAddBill = async (e) => {
     e.preventDefault();
     if (!billName || !billAmount || !billDueDate) return;
-    setBillLoading(true);
-
-    const newBill = {
-      id: Date.now().toString(),
-      user_id: userId,
-      name: billName,
-      amount: parseFloat(billAmount),
-      due_date: billDueDate,
-      is_paid: false
-    };
-
     try {
+      const user = (await supabase.auth.getUser()).data.user;
+      if (!user) return;
+
+      const newBill = {
+        id: Date.now().toString(),
+        user_id: user.id,
+        name: billName,
+        amount: parseFloat(billAmount),
+        due_date: billDueDate,
+        is_paid: false
+      };
+
       const { error } = await supabase.from('bills').insert(newBill);
       if (error) throw error;
+
       setBillName('');
       setBillAmount('');
       setBillDueDate('');
-      fetchBills();
-    } catch (err) {
-      alert('Gagal menambah pengingat tagihan: ' + err.message);
-    } finally {
-      setBillLoading(false);
+      fetchData();
+    } catch (error) {
+      alert(error.message);
     }
   };
 
-  // Pay Bill (mark as paid & create expense transaction)
   const handlePayBill = async (bill) => {
+    if (bill.is_paid) return;
+    const confirmPay = confirm(`Bayar tagihan "${bill.name}" sebesar ${formatIDR(bill.amount)}? Transaksi pengeluaran otomatis akan dicatat.`);
+    if (!confirmPay) return;
+
     try {
-      // 1. Mark bill as paid in DB
+      const user = (await supabase.auth.getUser()).data.user;
+      if (!user) return;
+
+      // 1. Mark as paid
       const { error } = await supabase.from('bills').update({ is_paid: true }).eq('id', bill.id);
       if (error) throw error;
 
-      // 2. Add expense transaction
+      // 2. Add automatic expense transaction
       const newTx = {
         id: Date.now().toString(),
+        user_id: user.id,
         type: 'expense',
         title: `Bayar Tagihan: ${bill.name}`,
-        amount: bill.amount,
-        category: 'Tagihan',
+        amount: parseFloat(bill.amount),
+        category: 'Lainnya',
         date: new Date().toISOString().split('T')[0],
         payment_method: 'cashless'
       };
-      
-      const { error: txErr } = await supabase.from('transactions').insert({
-        id: newTx.id,
-        user_id: userId,
-        type: newTx.type,
-        title: newTx.title,
-        amount: newTx.amount,
-        category: newTx.category,
-        date: newTx.date,
-        payment_method: newTx.payment_method
-      });
-      if (txErr) throw txErr;
+      await onAddTransaction(newTx);
 
-      fetchBills();
-      // Reload page to update balances in parent
-      window.location.reload();
-    } catch (err) {
-      alert('Gagal membayar tagihan: ' + err.message);
+      fetchData();
+    } catch (error) {
+      alert(error.message);
     }
   };
 
-  // Delete Bill
   const handleDeleteBill = async (id) => {
     try {
       const { error } = await supabase.from('bills').delete().eq('id', id);
       if (error) throw error;
-      fetchBills();
-    } catch (err) {
-      alert('Gagal menghapus tagihan: ' + err.message);
+      fetchData();
+    } catch (error) {
+      alert(error.message);
     }
   };
 
   return (
     <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '1.5rem' }}>
-      
-      {/* SECTION 1: BILL REMINDERS */}
+      {/* SECTION 1: RECURRING TRANSACTIONS */}
       <div className="card">
-        <h2 style={{ fontSize: '1.25rem', marginBottom: '1.25rem', fontWeight: 600 }}>Pengingat Tagihan Bulanan</h2>
-        
-        <form onSubmit={handleAddBill} className="reminder-form form-bills">
+        <h2 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '1.25rem', marginBottom: '1.25rem', fontWeight: 600 }}>
+          <Calendar size={20} color="var(--accent-color)" />
+          Transaksi Berulang Otomatis
+        </h2>
+
+        <form onSubmit={handleAddRecurring} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr auto', gap: '0.75rem', marginBottom: '1.5rem', alignItems: 'end' }}>
           <div className="form-group" style={{ marginBottom: 0 }}>
-            <input
-              type="text"
-              placeholder="Nama Tagihan (e.g. Listrik, Wifi)"
-              value={billName}
-              onChange={(e) => setBillName(e.target.value)}
-              required
-            />
+            <label>Judul</label>
+            <input type="text" placeholder="e.g. Kosan, Netflix" value={recTitle} onChange={(e) => setRecTitle(e.target.value)} required />
           </div>
           <div className="form-group" style={{ marginBottom: 0 }}>
-            <input
-              type="number"
-              placeholder="Nominal (Rp)"
-              value={billAmount}
-              onChange={(e) => setBillAmount(e.target.value)}
-              required
-              min="1000"
-            />
+            <label>Nominal</label>
+            <input type="number" placeholder="Nominal" value={recAmount} onChange={(e) => setRecAmount(e.target.value)} required />
           </div>
           <div className="form-group" style={{ marginBottom: 0 }}>
-            <input
-              type="date"
-              value={billDueDate}
-              onChange={(e) => setBillDueDate(e.target.value)}
-              required
-            />
+            <label>Frekuensi</label>
+            <select value={recInterval} onChange={(e) => setRecInterval(e.target.value)}>
+              <option value="daily">Harian</option>
+              <option value="weekly">Mingguan</option>
+              <option value="monthly">Bulanan</option>
+            </select>
           </div>
-          <button type="submit" className="btn-submit" disabled={billLoading} style={{ margin: 0, padding: '0 1rem' }}>
-            <Plus size={18} /> Tambah
+          <div className="form-group" style={{ marginBottom: 0 }}>
+            <label>Metode</label>
+            <select value={recMethod} onChange={(e) => setRecMethod(e.target.value)}>
+              <option value="cash">Cash</option>
+              <option value="cashless">Cashless</option>
+            </select>
+          </div>
+          <button type="submit" className="btn-submit" style={{ padding: '0.75rem 1rem', width: 'auto' }}>
+            <Plus size={16} /> Tambah
           </button>
         </form>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-          {bills.length === 0 ? (
-            <div className="empty-state">Belum ada pengingat tagihan.</div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '1rem' }}>
+          {recurrings.length === 0 ? (
+            <div className="empty-state">Belum ada pencatatan transaksi berulang otomatis.</div>
           ) : (
-            bills.map(b => (
-              <div key={b.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(255,255,255,0.02)', padding: '0.85rem 1rem', borderRadius: '0.75rem', border: '1px solid var(--border-color)' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                  <Bell size={18} style={{ color: b.is_paid ? 'var(--text-secondary)' : 'var(--accent-color)' }} />
-                  <div>
-                    <div style={{ fontWeight: 600, textDecoration: b.is_paid ? 'line-through' : 'none', color: b.is_paid ? 'var(--text-secondary)' : 'white' }}>{b.name}</div>
-                    <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Jatuh Tempo: {b.due_date} • {formatIDR(b.amount)}</div>
-                  </div>
+            recurrings.map(r => (
+              <div key={r.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(255,255,255,0.02)', padding: '1rem', borderRadius: '0.75rem', border: '1px solid var(--border-color)' }}>
+                <div>
+                  <h4 style={{ margin: 0, fontWeight: 600 }}>{r.title}</h4>
+                  <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                    {formatIDR(r.amount)} • {r.interval === 'daily' ? 'Harian' : r.interval === 'weekly' ? 'Mingguan' : 'Bulanan'} ({r.payment_method})
+                  </span>
                 </div>
-                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                  {!b.is_paid ? (
-                    <button onClick={() => handlePayBill(b)} style={{ background: 'var(--income-color)', color: 'white', border: 'none', padding: '0.35rem 0.75rem', borderRadius: '0.25rem', fontSize: '0.75rem', cursor: 'pointer', fontWeight: 600 }}>
-                      Bayar
-                    </button>
-                  ) : (
-                    <span style={{ fontSize: '0.75rem', color: 'var(--income-color)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.15rem' }}>
-                      <CheckCircle size={14} /> Lunas
-                    </span>
-                  )}
-                  <button onClick={() => handleDeleteBill(b.id)} className="btn-delete" style={{ padding: '0.25rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <span style={{ fontSize: '0.7rem', color: 'var(--accent-color)', background: 'rgba(139, 92, 246, 0.1)', padding: '0.2rem 0.5rem', borderRadius: '4px' }}>
+                    <Play size={10} style={{ display: 'inline', marginRight: '0.25rem' }} /> Terakhir: {r.last_triggered}
+                  </span>
+                  <button onClick={() => handleDeleteRecurring(r.id)} className="btn-delete">
                     <Trash2 size={14} />
                   </button>
                 </div>
@@ -290,72 +275,66 @@ export default function Reminders({ userId, formatIDR, onAddTransaction }) {
         </div>
       </div>
 
-      {/* SECTION 2: RECURRING TRANSACTIONS */}
+      {/* SECTION 2: BILL REMINDERS */}
       <div className="card">
-        <h2 style={{ fontSize: '1.25rem', marginBottom: '1.25rem', fontWeight: 600 }}>Otomatisasi Transaksi Berulang</h2>
-        
-        <form onSubmit={handleAddRecurring} className="reminder-form form-recurring">
+        <h2 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '1.25rem', marginBottom: '1.25rem', fontWeight: 600 }}>
+          <Bell size={20} color="var(--expense-color)" />
+          Pengingat Tagihan Aktif
+        </h2>
+
+        <form onSubmit={handleAddBill} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr auto', gap: '0.75rem', marginBottom: '1.5rem', alignItems: 'end' }}>
           <div className="form-group" style={{ marginBottom: 0 }}>
-            <input
-              type="text"
-              placeholder="Nama / Deskripsi"
-              value={recTitle}
-              onChange={(e) => setRecTitle(e.target.value)}
-              required
-            />
+            <label>Nama Tagihan</label>
+            <input type="text" placeholder="e.g. Listrik, Wifi" value={billName} onChange={(e) => setBillName(e.target.value)} required />
           </div>
           <div className="form-group" style={{ marginBottom: 0 }}>
-            <input
-              type="number"
-              placeholder="Nominal (Rp)"
-              value={recAmount}
-              onChange={(e) => setRecAmount(e.target.value)}
-              required
-              min="1"
-            />
+            <label>Jumlah Tagihan</label>
+            <input type="number" placeholder="Nominal" value={billAmount} onChange={(e) => setBillAmount(e.target.value)} required />
           </div>
           <div className="form-group" style={{ marginBottom: 0 }}>
-            <select value={recInterval} onChange={(e) => setRecInterval(e.target.value)} required>
-              <option value="daily">Harian</option>
-              <option value="weekly">Mingguan</option>
-              <option value="monthly">Bulanan</option>
-            </select>
+            <label>Jatuh Tempo</label>
+            <input type="date" value={billDueDate} onChange={(e) => setBillDueDate(e.target.value)} required />
           </div>
-          <div className="form-group" style={{ marginBottom: 0 }}>
-            <select value={recCategory} onChange={(e) => setRecCategory(e.target.value)} required>
-              {categories[recType].map(cat => (
-                <option key={cat} value={cat}>{cat}</option>
-              ))}
-            </select>
-          </div>
-          <button type="submit" className="btn-submit" disabled={recLoading} style={{ margin: 0, padding: '0 1rem' }}>
-            <Plus size={18} />
+          <button type="submit" className="btn-submit" style={{ padding: '0.75rem 1rem', width: 'auto' }}>
+            <Plus size={16} /> Tagihan
           </button>
         </form>
 
-        {/* List of Recurring items */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-          {recurring.length === 0 ? (
-            <div className="empty-state">Belum ada otomatisasi transaksi berulang.</div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '1rem' }}>
+          {bills.length === 0 ? (
+            <div className="empty-state">Belum ada pengingat tagihan.</div>
           ) : (
-            recurring.map(item => (
-              <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(255,255,255,0.02)', padding: '0.85rem 1rem', borderRadius: '0.75rem', border: '1px solid var(--border-color)' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                  <RefreshCw size={16} style={{ color: 'var(--saving-color)' }} />
+            bills.map(b => {
+              const isOverdue = new Date(b.due_date) < new Date() && !b.is_paid;
+              return (
+                <div key={b.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: b.is_paid ? 'rgba(16, 185, 129, 0.03)' : isOverdue ? 'rgba(239, 68, 68, 0.03)' : 'rgba(255,255,255,0.02)', padding: '1rem', borderRadius: '0.75rem', border: `1px solid ${b.is_paid ? 'var(--income-color)' : isOverdue ? 'var(--expense-color)' : 'var(--border-color)'}` }}>
                   <div>
-                    <div style={{ fontWeight: 600 }}>{item.title} ({item.interval === 'daily' ? 'Harian' : item.interval === 'weekly' ? 'Mingguan' : 'Bulanan'})</div>
-                    <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Kategori: {item.category} • {formatIDR(item.amount)} • Terakhir: {item.last_triggered}</div>
+                    <h4 style={{ margin: 0, fontWeight: 600, textDecoration: b.is_paid ? 'line-through' : 'none', color: b.is_paid ? 'var(--text-secondary)' : 'var(--text-primary)' }}>{b.name}</h4>
+                    <span style={{ fontSize: '0.8rem', color: isOverdue ? 'var(--expense-color)' : 'var(--text-secondary)' }}>
+                      Tempo: {b.due_date} {isOverdue && '(Terlewat)'}
+                    </span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                    <span style={{ fontWeight: 600, fontSize: '0.9rem', marginRight: '0.5rem' }}>{formatIDR(b.amount)}</span>
+                    {!b.is_paid ? (
+                      <button onClick={() => handlePayBill(b)} className="btn-toggle active income" style={{ padding: '0.4rem 0.75rem', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                        <Clock size={12} /> Bayar
+                      </button>
+                    ) : (
+                      <span style={{ color: 'var(--income-color)', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                        <CheckCircle2 size={14} /> Lunas
+                      </span>
+                    )}
+                    <button onClick={() => handleDeleteBill(b.id)} className="btn-delete">
+                      <Trash2 size={14} />
+                    </button>
                   </div>
                 </div>
-                <button onClick={() => handleDeleteRecurring(item.id)} className="btn-delete" style={{ padding: '0.25rem' }}>
-                  <Trash2 size={14} />
-                </button>
-              </div>
-            ))
+              );
+            })
           )}
         </div>
       </div>
-
     </div>
   );
 }

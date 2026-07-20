@@ -1,359 +1,221 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { supabase } from '../supabaseClient';
-import { jsPDF } from 'jspdf';
-import 'jspdf-autotable';
-import { 
-  TrendingUp, 
-  Download, 
-  Wallet, 
-  Globe, 
-  Plus, 
-  Trash2, 
-  RefreshCw, 
-  BarChart2, 
-  FileText 
-} from 'lucide-react';
+import React from 'react';
+import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, PointElement, LineElement, Title, Tooltip, Legend } from 'chart.js';
+import { Bar, Line } from 'react-chartjs-2';
+import { TrendingUp, Award, AlertCircle, Compass } from 'lucide-react';
 
-export default function AdvancedAnalytics({ userId, transactions, cashBalance, cashlessBalance, balance, formatIDR }) {
-  // Wallet States
-  const [wallets, setWallets] = useState([]);
-  const [walletName, setWalletName] = useState('');
-  const [walletType, setWalletType] = useState('cash'); // cash, cashless
-  const [walletBalance, setWalletBalance] = useState('');
-  const [walletLoading, setWalletLoading] = useState(false);
+ChartJS.register(CategoryScale, LinearScale, BarElement, PointElement, LineElement, Title, Tooltip, Legend);
 
-  // Currency Converter States
-  const [exchangeRates, setExchangeRates] = useState({});
-  const [targetCurrency, setTargetCurrency] = useState('USD');
-  const [currencyLoading, setCurrencyLoading] = useState(false);
+export default function AdvancedAnalytics({ transactions, balance, formatIDR }) {
+  // 1. Calculate Monthly Cash Flow (last 6 months)
+  const monthlyFlow = React.useMemo(() => {
+    const months = [];
+    const incomeData = [];
+    const expenseData = [];
 
-  useEffect(() => {
-    fetchWallets();
-    fetchExchangeRates();
-  }, []);
+    // Get last 6 months list
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date();
+      d.setMonth(d.getMonth() - i);
+      const mName = d.toLocaleString('id-ID', { month: 'short' });
+      months.push(mName);
 
-  const fetchWallets = async () => {
-    try {
-      const { data, error } = await supabase.from('wallets').select('*');
-      if (error) throw error;
-      setWallets(data || []);
-    } catch (err) {
-      console.error('Error fetching wallets:', err.message);
+      // Filter transactions for this month
+      const mTx = transactions.filter(t => {
+        const txDate = new Date(t.date);
+        return txDate.getFullYear() === d.getFullYear() && txDate.getMonth() === d.getMonth();
+      });
+
+      const inc = mTx.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0);
+      const exp = mTx.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0);
+
+      incomeData.push(inc);
+      expenseData.push(exp);
     }
-  };
 
-  const fetchExchangeRates = async () => {
-    setCurrencyLoading(true);
-    try {
-      const res = await fetch('https://open.er-api.com/v6/latest/IDR');
-      const data = await res.json();
-      if (data && data.rates) {
-        setExchangeRates(data.rates);
-      }
-    } catch (err) {
-      console.error('Error fetching rates:', err.message);
-    } finally {
-      setCurrencyLoading(false);
+    return { labels: months, income: incomeData, expense: expenseData };
+  }, [transactions]);
+
+  // 2. Daily/Weekly Expense Trend (last 14 days)
+  const dailyTrend = React.useMemo(() => {
+    const labels = [];
+    const data = [];
+
+    for (let i = 13; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      const dStr = d.toISOString().split('T')[0];
+      const dLabel = d.toLocaleString('id-ID', { day: 'numeric', month: 'short' });
+      labels.push(dLabel);
+
+      const dayExp = transactions
+        .filter(t => t.type === 'expense' && t.date === dStr)
+        .reduce((sum, t) => sum + t.amount, 0);
+
+      data.push(dayExp);
     }
-  };
 
-  // Add Wallet
-  const handleAddWallet = async (e) => {
-    e.preventDefault();
-    if (!walletName || !walletBalance) return;
-    setWalletLoading(true);
+    return { labels, data };
+  }, [transactions]);
 
-    const newWallet = {
-      id: Date.now().toString(),
-      user_id: userId,
-      name: walletName,
-      type: walletType,
-      balance: parseFloat(walletBalance)
-    };
-
-    try {
-      const { error } = await supabase.from('wallets').insert(newWallet);
-      if (error) throw error;
-      setWalletName('');
-      setWalletBalance('');
-      fetchWallets();
-      // Reload page to reflect wallet balance in parent if needed
-      window.location.reload();
-    } catch (err) {
-      alert('Gagal menambah dompet: ' + err.message);
-    } finally {
-      setWalletLoading(false);
+  // 3. AI/Trend Predictions
+  const predictions = React.useMemo(() => {
+    const expenses = transactions.filter(t => t.type === 'expense');
+    if (expenses.length === 0) {
+      return {
+        dailyAvg: 0,
+        daysRemaining: 'Infinity',
+        nextMonthEst: 0,
+        advice: 'Belum ada catatan pengeluaran untuk dianalisis. Silakan masukkan transaksi pengeluaran.'
+      };
     }
-  };
 
-  // Delete Wallet
-  const handleDeleteWallet = async (id) => {
-    try {
-      const { error } = await supabase.from('wallets').delete().eq('id', id);
-      if (error) throw error;
-      fetchWallets();
-      window.location.reload();
-    } catch (err) {
-      alert('Gagal menghapus dompet: ' + err.message);
-    }
-  };
-
-  // Export CSV
-  const exportToCSV = () => {
-    const headers = ['ID', 'Tipe', 'Judul', 'Nominal', 'Kategori', 'Tanggal', 'Metode Pembayaran'];
-    const rows = transactions.map(t => [
-      t.id,
-      t.type,
-      t.title,
-      t.amount,
-      t.category,
-      t.date,
-      t.payment_method || 'cash'
-    ]);
-
-    let csvContent = "data:text/csv;charset=utf-8," 
-      + [headers.join(','), ...rows.map(e => e.join(','))].join('\n');
-    
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `laporan_keuangan_${new Date().toISOString().split('T')[0]}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
-
-  // Export JSON
-  const exportToJSON = () => {
-    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(transactions, null, 2));
-    const link = document.createElement("a");
-    link.setAttribute("href", dataStr);
-    link.setAttribute("download", `laporan_keuangan_${new Date().toISOString().split('T')[0]}.json`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
-
-  // Export PDF (optimized for mobile/iOS & Android)
-  const exportToPDF = () => {
-    const doc = new jsPDF();
-    
-    // Header
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(18);
-    doc.text("Laporan Transaksi Keuangan", 14, 20);
-    
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(10);
-    doc.text(`Tanggal Cetak: ${new Date().toLocaleDateString('id-ID')}`, 14, 26);
-    doc.text(`Total Saldo: Rp ${balance.toLocaleString('id-ID')}`, 14, 32);
-
-    // Table Columns & Rows
-    const tableColumn = ["Tanggal", "Judul", "Kategori", "Tipe", "Metode", "Nominal (Rp)"];
-    const tableRows = [];
-
-    transactions.forEach(t => {
-      const rowData = [
-        t.date,
-        t.title,
-        t.category,
-        t.type === 'income' ? 'Masuk' : t.type === 'expense' ? 'Keluar' : t.type === 'deposit' ? 'Setor Tabungan' : t.type === 'withdraw' ? 'Tarik Tabungan' : 'Transfer',
-        t.payment_method === 'cashless' ? 'Cashless' : 'Cash',
-        t.amount.toLocaleString('id-ID')
-      ];
-      tableRows.push(rowData);
-    });
-
-    // Auto Table Plugin
-    doc.autoTable({
-      startY: 38,
-      head: [tableColumn],
-      body: tableRows,
-      theme: 'striped',
-      headStyles: { fillColor: [139, 92, 246] },
-      styles: { fontSize: 8 },
-      columnStyles: {
-        5: { halign: 'right' }
-      }
-    });
-
-    doc.save(`laporan_keuangan_${new Date().toISOString().split('T')[0]}.pdf`);
-  };
-
-  // AI Trend Spending Analysis
-  const aiTrend = useMemo(() => {
+    // Get unique expense days in the last 30 days
+    const now = new Date();
     const thirtyDaysAgo = new Date();
-    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-    const thirtyDaysAgoStr = thirtyDaysAgo.toISOString().split('T')[0];
+    thirtyDaysAgo.setDate(now.getDate() - 30);
 
-    const recentExpenses = transactions.filter(t => t.type === 'expense' && t.date >= thirtyDaysAgoStr);
+    const recentExpenses = expenses.filter(t => new Date(t.date) >= thirtyDaysAgo);
     const totalRecent = recentExpenses.reduce((sum, t) => sum + t.amount, 0);
-    const dailyAverage = totalRecent / 30;
+    
+    // Average daily expense based on 30 days interval
+    const dailyAvg = totalRecent / 30;
 
-    let daysRemaining = 'N/A';
-    if (dailyAverage > 0) {
-      daysRemaining = Math.max(Math.round(balance / dailyAverage), 0);
+    // Remaining days prediction
+    const daysRemaining = dailyAvg > 0 ? Math.floor(balance / dailyAvg) : 'Tak Terbatas';
+
+    // Projected next month expense
+    const nextMonthEst = dailyAvg * 30;
+
+    // Financial advice logic
+    let advice = 'Pengeluaran Anda dalam batas wajar. Pertahankan kebiasaan menabung Anda!';
+    if (dailyAvg > 0) {
+      const recentIncome = transactions
+        .filter(t => t.type === 'income' && new Date(t.date) >= thirtyDaysAgo)
+        .reduce((sum, t) => sum + t.amount, 0);
+
+      const savingsRate = recentIncome > 0 ? ((recentIncome - totalRecent) / recentIncome) * 100 : 0;
+
+      if (savingsRate < 10) {
+        advice = 'Peringatan: Rasio tabungan bulanan Anda di bawah 10%. Kurangi pengeluaran kategori Hiburan / Belanja agar sisa saldo Anda lebih aman.';
+      } else if (savingsRate >= 30) {
+        advice = 'Hebat! Anda menabung lebih dari 30% pendapatan Anda. Pertimbangkan mengalokasikan dana ke Target Tabungan Khusus.';
+      }
+
+      if (daysRemaining < 10 && balance > 0) {
+        advice = 'Kritis: Dengan pengeluaran harian rata-rata Anda saat ini, saldo Anda diprediksi akan habis dalam waktu kurang dari 10 hari!';
+      }
     }
 
-    return {
-      dailyAverage,
-      daysRemaining,
-      totalRecent
-    };
+    return { dailyAvg, daysRemaining, nextMonthEst, advice };
   }, [transactions, balance]);
 
-  // Convert Balances
-  const convertedValues = useMemo(() => {
-    const rate = exchangeRates[targetCurrency] || 0;
-    return {
-      total: balance * rate,
-      cash: cashBalance * rate,
-      cashless: cashlessBalance * rate
-    };
-  }, [exchangeRates, targetCurrency, balance, cashBalance, cashlessBalance]);
+  // Chart configuration
+  const barData = {
+    labels: monthlyFlow.labels,
+    datasets: [
+      {
+        label: 'Pemasukan',
+        data: monthlyFlow.income,
+        backgroundColor: '#10b981',
+        borderRadius: 4,
+      },
+      {
+        label: 'Pengeluaran',
+        data: monthlyFlow.expense,
+        backgroundColor: '#ef4444',
+        borderRadius: 4,
+      }
+    ]
+  };
+
+  const lineData = {
+    labels: dailyTrend.labels,
+    datasets: [
+      {
+        label: 'Pengeluaran Harian (Rp)',
+        data: dailyTrend.data,
+        borderColor: '#8b5cf6',
+        backgroundColor: 'rgba(139, 92, 246, 0.1)',
+        tension: 0.3,
+        fill: true,
+        pointBackgroundColor: '#8b5cf6',
+      }
+    ]
+  };
+
+  const chartOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: {
+        labels: { color: '#94a3b8', font: { family: 'Inter', size: 11 } }
+      }
+    },
+    scales: {
+      x: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#64748b' } },
+      y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#64748b' } }
+    }
+  };
 
   return (
     <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '1.5rem' }}>
       
-      {/* AI TREND PREDICTION & SPENDING REPORT */}
-      <div className="card">
-        <h2 style={{ fontSize: '1.25rem', marginBottom: '1.25rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <TrendingUp size={20} style={{ color: 'var(--accent-color)' }} /> Prediksi & Analisis Tren Keuangan (AI)
+      {/* AI SUGGESTION & STATS CARD */}
+      <div className="card" style={{ background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.08) 0%, rgba(15, 23, 42, 0.4) 100%)', border: '1px solid rgba(139, 92, 246, 0.2)' }}>
+        <h2 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '1.25rem', marginBottom: '1.25rem', fontWeight: 600 }}>
+          <Compass size={20} color="var(--accent-color)" />
+          Prediksi Asisten AI
         </h2>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginBottom: '1.5rem' }}>
           <div style={{ background: 'rgba(255,255,255,0.02)', padding: '1rem', borderRadius: '0.75rem', border: '1px solid var(--border-color)' }}>
-            <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Rata-rata Pengeluaran / Hari (30 Hari Terakhir)</div>
-            <div style={{ fontSize: '1.2rem', fontWeight: 700, marginTop: '0.25rem' }}>{formatIDR(aiTrend.dailyAverage)}</div>
+            <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Rata-rata Pengeluaran Harian</span>
+            <h3 style={{ margin: '0.25rem 0 0 0', fontSize: '1.2rem', fontWeight: 700 }}>{formatIDR(predictions.dailyAvg)}</h3>
           </div>
+          
           <div style={{ background: 'rgba(255,255,255,0.02)', padding: '1rem', borderRadius: '0.75rem', border: '1px solid var(--border-color)' }}>
-            <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Prediksi Saldo Habis Dalam</div>
-            <div style={{ fontSize: '1.2rem', fontWeight: 700, marginTop: '0.25rem', color: aiTrend.daysRemaining < 10 ? 'var(--expense-color)' : 'var(--income-color)' }}>
-              {aiTrend.daysRemaining === 'N/A' ? 'N/A' : `${aiTrend.daysRemaining} Hari`}
-            </div>
+            <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Sisa Hari Saldo Aman</span>
+            <h3 style={{ margin: '0.25rem 0 0 0', fontSize: '1.2rem', fontWeight: 700, color: predictions.daysRemaining < 10 ? 'var(--expense-color)' : 'var(--income-color)' }}>
+              {predictions.daysRemaining} Hari
+            </h3>
           </div>
-        </div>
-        <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', lineHeight: '1.4' }}>
-          *Analisis berbasis pengeluaran riil Anda. Menjaga pola pengeluaran di bawah rata-rata akan meningkatkan ketahanan saldo Anda.
-        </p>
-      </div>
 
-      {/* CURRENCY CONVERTER */}
-      <div className="card">
-        <h2 style={{ fontSize: '1.25rem', marginBottom: '1.25rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <Globe size={20} style={{ color: 'var(--saving-color)' }} /> Konversi Mata Uang Asing
-        </h2>
-        <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '1.25rem', alignItems: 'center' }}>
-          <span style={{ fontSize: '0.85rem' }}>Pilih Mata Uang:</span>
-          <select 
-            value={targetCurrency} 
-            onChange={(e) => setTargetCurrency(e.target.value)}
-            style={{ width: 'auto', padding: '0.5rem', background: '#0b0f19', borderRadius: '0.5rem' }}
-          >
-            <option value="USD">USD (Dolar AS)</option>
-            <option value="EUR">EUR (Euro)</option>
-            <option value="SGD">SGD (Dolar Singapura)</option>
-            <option value="JPY">JPY (Yen Jepang)</option>
-          </select>
-          {currencyLoading && <RefreshCw size={14} className="animate-spin" />}
+          <div style={{ background: 'rgba(255,255,255,0.02)', padding: '1rem', borderRadius: '0.75rem', border: '1px solid var(--border-color)' }}>
+            <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Estimasi Pengeluaran Bulan Depan</span>
+            <h3 style={{ margin: '0.25rem 0 0 0', fontSize: '1.2rem', fontWeight: 700 }}>{formatIDR(predictions.nextMonthEst)}</h3>
+          </div>
         </div>
-        
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem' }}>
-          <div style={{ background: 'rgba(255,255,255,0.02)', padding: '0.85rem', borderRadius: '0.75rem', border: '1px solid var(--border-color)', textAlign: 'center' }}>
-            <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Total Saldo ({targetCurrency})</div>
-            <div style={{ fontSize: '1.1rem', fontWeight: 700, marginTop: '0.25rem' }}>
-              {targetCurrency} {convertedValues.total.toLocaleString(undefined, { maximumFractionDigits: 2 })}
-            </div>
-          </div>
-          <div style={{ background: 'rgba(255,255,255,0.02)', padding: '0.85rem', borderRadius: '0.75rem', border: '1px solid var(--border-color)', textAlign: 'center' }}>
-            <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Saldo Cash ({targetCurrency})</div>
-            <div style={{ fontSize: '1.1rem', fontWeight: 700, marginTop: '0.25rem' }}>
-              {targetCurrency} {convertedValues.cash.toLocaleString(undefined, { maximumFractionDigits: 2 })}
-            </div>
-          </div>
-          <div style={{ background: 'rgba(255,255,255,0.02)', padding: '0.85rem', borderRadius: '0.75rem', border: '1px solid var(--border-color)', textAlign: 'center' }}>
-            <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Cashless ({targetCurrency})</div>
-            <div style={{ fontSize: '1.1rem', fontWeight: 700, marginTop: '0.25rem' }}>
-              {targetCurrency} {convertedValues.cashless.toLocaleString(undefined, { maximumFractionDigits: 2 })}
-            </div>
-          </div>
+
+        <div style={{ display: 'flex', gap: '0.75rem', background: 'rgba(255,255,255,0.03)', padding: '1rem', borderRadius: '0.75rem', borderLeft: '4px solid var(--accent-color)' }}>
+          <Award size={20} color="var(--accent-color)" style={{ flexShrink: 0 }} />
+          <p style={{ margin: 0, fontSize: '0.875rem', lineHeight: '1.4', color: 'var(--text-primary)' }}>
+            {predictions.advice}
+          </p>
         </div>
       </div>
 
-      {/* CUSTOM WALLET MANAGEMENT */}
-      <div className="card">
-        <h2 style={{ fontSize: '1.25rem', marginBottom: '1.25rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <Wallet size={20} style={{ color: 'var(--income-color)' }} /> Kelola Dompet Kustom (Multi-Wallet)
-        </h2>
-        
-        <form onSubmit={handleAddWallet} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr auto', gap: '0.75rem', marginBottom: '1.5rem' }}>
-          <div className="form-group" style={{ marginBottom: 0 }}>
-            <input
-              type="text"
-              placeholder="Nama Dompet (e.g. Gopay, Bank Mandiri)"
-              value={walletName}
-              onChange={(e) => setWalletName(e.target.value)}
-              required
-            />
+      {/* CHARTS GRID */}
+      <div className="charts-grid">
+        {/* CHART 1: MONTHLY CASH FLOW */}
+        <div className="card">
+          <h3 style={{ fontSize: '1rem', marginBottom: '1rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <TrendingUp size={16} color="var(--income-color)" />
+            Arus Kas 6 Bulan Terakhir
+          </h3>
+          <div style={{ height: '260px' }}>
+            <Bar data={barData} options={chartOptions} />
           </div>
-          <div className="form-group" style={{ marginBottom: 0 }}>
-            <input
-              type="number"
-              placeholder="Saldo Awal (Rp)"
-              value={walletBalance}
-              onChange={(e) => setWalletBalance(e.target.value)}
-              required
-              min="0"
-            />
-          </div>
-          <div className="form-group" style={{ marginBottom: 0 }}>
-            <select value={walletType} onChange={(e) => setWalletType(e.target.value)} required>
-              <option value="cash">Cash (Tunai)</option>
-              <option value="cashless">Cashless (Digital)</option>
-            </select>
-          </div>
-          <button type="submit" className="btn-submit" disabled={walletLoading} style={{ margin: 0, padding: '0 1rem' }}>
-            <Plus size={18} />
-          </button>
-        </form>
-
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-          {wallets.length === 0 ? (
-            <div className="empty-state">Belum ada dompet kustom tambahan.</div>
-          ) : (
-            wallets.map(w => (
-              <div key={w.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(255,255,255,0.02)', padding: '0.85rem 1rem', borderRadius: '0.75rem', border: '1px solid var(--border-color)' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                  <Wallet size={16} style={{ color: w.type === 'cashless' ? 'var(--saving-color)' : 'var(--income-color)' }} />
-                  <div>
-                    <div style={{ fontWeight: 600 }}>{w.name} ({w.type === 'cashless' ? 'Digital' : 'Tunai'})</div>
-                    <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Saldo: {formatIDR(w.balance)}</div>
-                  </div>
-                </div>
-                <button onClick={() => handleDeleteWallet(w.id)} className="btn-delete" style={{ padding: '0.25rem' }}>
-                  <Trash2 size={14} />
-                </button>
-              </div>
-            ))
-          )}
         </div>
-      </div>
 
-      {/* EXPORT DATA ACTIONS */}
-      <div className="card">
-        <h2 style={{ fontSize: '1.25rem', marginBottom: '1.25rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <Download size={20} style={{ color: 'var(--accent-color)' }} /> Ekspor Laporan Keuangan & Backup
-        </h2>
-        
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1.25rem' }}>
-          <button onClick={exportToCSV} className="btn-submit" style={{ margin: 0, background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border-color)', color: 'white' }}>
-            <FileText size={18} style={{ marginRight: '0.5rem' }} /> Ekspor CSV
-          </button>
-          <button onClick={exportToJSON} className="btn-submit" style={{ margin: 0, background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border-color)', color: 'white' }}>
-            <FileText size={18} style={{ marginRight: '0.5rem' }} /> Ekspor JSON
-          </button>
-          <button onClick={exportToPDF} className="btn-submit" style={{ margin: 0, background: 'var(--accent-color)', color: 'white' }}>
-            <Download size={18} style={{ marginRight: '0.5rem' }} /> Ekspor PDF
-          </button>
+        {/* CHART 2: DAILY EXPENSE TREND */}
+        <div className="card">
+          <h3 style={{ fontSize: '1rem', marginBottom: '1rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <TrendingUp size={16} color="var(--accent-color)" />
+            Tren Pengeluaran 14 Hari Terakhir
+          </h3>
+          <div style={{ height: '260px' }}>
+            <Line data={lineData} options={chartOptions} />
+          </div>
         </div>
       </div>
 
