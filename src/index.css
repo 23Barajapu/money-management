@@ -660,7 +660,7 @@ input:focus, select:focus, textarea:focus {
 
   .main-content {
     margin: 0 !important;
-    padding: 2cm !important;
+    padding: 1cm !important;
     width: 100% !important;
     box-shadow: none !important;
     background: transparent !important;
@@ -673,6 +673,34 @@ input:focus, select:focus, textarea:focus {
     box-shadow: none !important;
     margin-bottom: 1.5rem !important;
     break-inside: avoid;
+    padding: 1.5rem !important;
+  }
+
+  .dashboard-summary {
+    display: grid !important;
+    grid-template-columns: repeat(4, 1fr) !important;
+    gap: 0.75rem !important;
+    margin-bottom: 1.5rem !important;
+  }
+
+  .summary-card {
+    padding: 0.75rem !important;
+    background: transparent !important;
+    border: 1px solid #ddd !important;
+  }
+
+  .list-items {
+    max-height: none !important;
+    overflow: visible !important;
+  }
+
+  .list-item {
+    background: transparent !important;
+    border: none !important;
+    border-bottom: 1px solid #eee !important;
+    border-radius: 0 !important;
+    padding: 0.5rem 0 !important;
+    box-shadow: none !important;
   }
 
   .item-title, .item-meta, .item-amount {

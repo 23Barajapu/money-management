@@ -711,7 +711,7 @@ export default function App() {
                 {monthlyTransactions.length === 0 ? (
                   <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>Belum ada catatan keuangan di bulan ini.</p>
                 ) : (
-                  <div className="list-items" style={{ background: 'transparent' }}>
+                  <div className="list-items" style={{ background: 'transparent', maxHeight: 'none', overflowY: 'visible' }}>
                     {monthlyTransactions.map(tx => (
                       <div key={tx.id} className="list-item" style={{ borderBottom: '1px solid var(--border-color)', padding: '0.75rem 0', borderRadius: 0 }}>
                         <div className="item-info">
