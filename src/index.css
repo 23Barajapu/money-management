@@ -481,3 +481,17 @@ input:focus, select:focus, textarea:focus {
   }
 }
 
+/* Charts Grid Responsiveness */
+.charts-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.5rem;
+}
+
+@media (min-width: 768px) {
+  .charts-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+

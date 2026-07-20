@@ -83,7 +83,7 @@ export default function DashboardCharts({ transactions }) {
   };
 
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '1.5rem' }}>
+    <div className="charts-grid">
       <div className="card">
         <h2 style={{ fontSize: '1.1rem', marginBottom: '1rem', fontWeight: 600 }}>Kategori Pengeluaran</h2>
         <div style={{ height: '220px', position: 'relative' }}>
