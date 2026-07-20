@@ -46,7 +46,7 @@ export default function Auth() {
         }
         
         setMode('signup_otp');
-        setMessage({ text: 'Registrasi sukses! Masukkan 6 digit kode OTP dari email Anda.', type: 'success' });
+        setMessage({ text: 'Registrasi sukses! Masukkan kode OTP dari email Anda. (Periksa folder Spam jika tidak masuk)', type: 'success' });
       } else if (mode === 'signup_otp') {
         const { error } = await supabase.auth.verifyOtp({
           email,
@@ -59,7 +59,7 @@ export default function Auth() {
         const { error } = await supabase.auth.resetPasswordForEmail(email);
         if (error) throw error;
         setMode('reset_otp');
-        setMessage({ text: 'Kode reset terkirim! Periksa inbox email Anda.', type: 'success' });
+        setMessage({ text: 'Kode reset terkirim! Periksa inbox email Anda. (Periksa folder Spam jika tidak masuk)', type: 'success' });
       } else if (mode === 'reset_otp') {
         const { error } = await supabase.auth.verifyOtp({
           email,
@@ -141,7 +141,7 @@ export default function Auth() {
               <label>Kode Verifikasi (OTP)</label>
               <input
                 type="text"
-                placeholder="12345678"
+                placeholder="e.g. 12345678"
                 value={otpToken}
                 onChange={(e) => setOtpToken(e.target.value)}
                 required
@@ -149,6 +149,9 @@ export default function Auth() {
                 pattern="\d{6,8}"
                 style={{ textAlign: 'center', fontSize: '1.25rem', letterSpacing: '0.25rem' }}
               />
+              <span style={{ display: 'block', fontSize: '0.75rem', color: 'var(--expense-color)', marginTop: '0.5rem', textAlign: 'center', fontWeight: '500' }}>
+                *Penting: Periksa folder <strong>Spam / Promosi</strong> jika email OTP belum masuk ke inbox utama.
+              </span>
             </div>
           )}
 
