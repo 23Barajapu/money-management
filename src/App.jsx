@@ -11,7 +11,8 @@ import {
   History, 
   CreditCard,
   Calendar,
-  TrendingUp
+  TrendingUp,
+  User
 } from 'lucide-react';
 import { supabase } from './supabaseClient';
 import TransactionForm from './components/TransactionForm';
