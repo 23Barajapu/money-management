@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
 import { PiggyBank, Plus, Trash2, ArrowUpRight, AlertTriangle } from 'lucide-react';
 
-export default function BudgetAndSavings({ userId, transactions, formatIDR }) {
+export default function BudgetAndSavings({ userId, transactions = [], formatIDR }) {
   // Budget States
   const [budgets, setBudgets] = useState([]);
   const [budgetCategory, setBudgetCategory] = useState('Makanan');
@@ -233,8 +233,8 @@ export default function BudgetAndSavings({ userId, transactions, formatIDR }) {
                   </div>
                   
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>
-                    <span>Terpakai: {formatIDR(spent)}</span>
-                    <span>Limit: {formatIDR(b.limit_amount)}</span>
+                    <span>Terpakai: {formatIDR(parseFloat(spent) || 0)}</span>
+                    <span>Limit: {formatIDR(parseFloat(b.limit_amount) || 0)}</span>
                   </div>
 
                   {/* Progress Bar */}
@@ -305,8 +305,8 @@ export default function BudgetAndSavings({ userId, transactions, formatIDR }) {
                   </div>
 
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>
-                    <span>Terkumpul: {formatIDR(g.current_saved)}</span>
-                    <span>Target: {formatIDR(g.goal_amount)}</span>
+                    <span>Terkumpul: {formatIDR(parseFloat(g.current_saved) || 0)}</span>
+                    <span>Target: {formatIDR(parseFloat(g.goal_amount) || 0)}</span>
                   </div>
 
                   {/* Progress Bar */}
