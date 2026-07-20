@@ -92,15 +92,3 @@ VITE_SUPABASE_ANON_KEY=KEY_ANON_SUPABASE_ANDA
 npm run dev
 ```
 Aplikasi akan berjalan di `http://localhost:5173`.
-
----
-
-## ☁️ Cara Deploy ke Vercel
-
-1. Buka [vercel.com](https://vercel.com) dan hubungkan dengan akun GitHub Anda.
-2. Impor proyek ini dari daftar repositori Anda.
-3. Di bagian **Environment Variables**, tambahkan:
-   - `VITE_SUPABASE_URL`
-   - `VITE_SUPABASE_ANON_KEY`
-   *(Pastikan dicentang untuk Production, Preview, dan Development).*
-4. Klik **Deploy**.
