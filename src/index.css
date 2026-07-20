@@ -638,5 +638,47 @@ input:focus, select:focus, textarea:focus {
   animation: spin 1s linear infinite;
 }
 
+/* Print Styles */
+@media print {
+  body, #root, .app-container {
+    background: #ffffff !important;
+    color: #000000 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  .sidebar,
+  .bottom-nav,
+  .header-mobile,
+  .no-print,
+  button,
+  .btn-delete,
+  .btn-submit,
+  .filter-tabs {
+    display: none !important;
+  }
+
+  .main-content {
+    margin: 0 !important;
+    padding: 2cm !important;
+    width: 100% !important;
+    box-shadow: none !important;
+    background: transparent !important;
+  }
+
+  .card {
+    background: transparent !important;
+    border: 1px solid #ddd !important;
+    color: #000 !important;
+    box-shadow: none !important;
+    margin-bottom: 1.5rem !important;
+    break-inside: avoid;
+  }
+
+  .item-title, .item-meta, .item-amount {
+    color: #000 !important;
+  }
+}
+
 
 
