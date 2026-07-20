@@ -677,6 +677,42 @@ input:focus, select:focus, textarea:focus {
   }
 }
 
+/* Reminder Grid Forms Desktop */
+.reminder-grid-form {
+  display: grid;
+  grid-template-columns: 1.5fr 1fr 1fr 1fr auto;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+  align-items: end;
+}
+
+.bill-grid-form {
+  display: grid;
+  grid-template-columns: 1.5fr 1fr 1fr auto;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+  align-items: end;
+}
+
+/* Mobile Responsive Grid Forms */
+@media (max-width: 768px) {
+  .reminder-grid-form {
+    grid-template-columns: 1fr 1fr;
+  }
+  .reminder-grid-form button {
+    grid-column: span 2;
+    width: 100% !important;
+  }
+
+  .bill-grid-form {
+    grid-template-columns: 1fr;
+  }
+  .bill-grid-form button {
+    width: 100% !important;
+  }
+}
+
+
 
 
 

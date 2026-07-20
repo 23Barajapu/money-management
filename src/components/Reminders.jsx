@@ -220,7 +220,7 @@ export default function Reminders({ onAddTransaction, formatIDR }) {
           Transaksi Berulang Otomatis
         </h2>
 
-        <form onSubmit={handleAddRecurring} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr auto', gap: '0.75rem', marginBottom: '1.5rem', alignItems: 'end' }}>
+        <form onSubmit={handleAddRecurring} className="reminder-grid-form">
           <div className="form-group" style={{ marginBottom: 0 }}>
             <label>Judul</label>
             <input type="text" placeholder="e.g. Kosan, Netflix" value={recTitle} onChange={(e) => setRecTitle(e.target.value)} required />
@@ -282,7 +282,7 @@ export default function Reminders({ onAddTransaction, formatIDR }) {
           Pengingat Tagihan Aktif
         </h2>
 
-        <form onSubmit={handleAddBill} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr auto', gap: '0.75rem', marginBottom: '1.5rem', alignItems: 'end' }}>
+        <form onSubmit={handleAddBill} className="bill-grid-form">
           <div className="form-group" style={{ marginBottom: 0 }}>
             <label>Nama Tagihan</label>
             <input type="text" placeholder="e.g. Listrik, Wifi" value={billName} onChange={(e) => setBillName(e.target.value)} required />
