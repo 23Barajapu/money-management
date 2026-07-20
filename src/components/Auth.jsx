@@ -141,12 +141,12 @@ export default function Auth() {
               <label>Kode Verifikasi (OTP)</label>
               <input
                 type="text"
-                placeholder="e.g. 123456"
+                placeholder="12345678"
                 value={otpToken}
                 onChange={(e) => setOtpToken(e.target.value)}
                 required
-                maxLength="6"
-                pattern="\d{6}"
+                maxLength="8"
+                pattern="\d{6,8}"
                 style={{ textAlign: 'center', fontSize: '1.25rem', letterSpacing: '0.25rem' }}
               />
             </div>
