@@ -397,15 +397,7 @@ export default function App() {
             onClick={() => setActiveTab('reminders')}
           >
             <Calendar size={18} />
-            <span>Tagihan</span>
-          </button>
-
-          <button 
-            className={`sidebar-item ${activeTab === 'installments' ? 'active' : ''}`}
-            onClick={() => setActiveTab('installments')}
-          >
-            <CreditCard size={18} />
-            <span>Cicilan</span>
+            <span>Tagihan & Cicilan</span>
           </button>
 
           <button 
@@ -578,25 +570,19 @@ export default function App() {
           </div>
         )}
 
-        {/* Tab 4: Installments */}
-        {activeTab === 'installments' && (
-          <div style={{ maxWidth: '600px', margin: '0 auto' }}>
+        {/* Tab 4: Tagihan & Cicilan */}
+        {activeTab === 'reminders' && (
+          <div style={{ maxWidth: '800px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+            <Reminders 
+              onAddTransaction={handleAddTransaction} 
+              formatIDR={formatIDR} 
+            />
             <InstallmentTracker 
               installments={installments}
               onAddInstallment={handleAddInstallment}
               onDeleteInstallment={handleDeleteInstallment}
               onPayInstallment={handlePayInstallment}
               balance={balance}
-            />
-          </div>
-        )}
-
-        {/* Tab 5: Tagihan & Otomatisasi */}
-        {activeTab === 'reminders' && (
-          <div style={{ maxWidth: '800px', margin: '0 auto' }}>
-            <Reminders 
-              onAddTransaction={handleAddTransaction} 
-              formatIDR={formatIDR} 
             />
           </div>
         )}
