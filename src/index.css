@@ -436,20 +436,23 @@ input:focus, select:focus, textarea:focus {
 
 /* Mobile Responsiveness */
 @media (max-width: 768px) {
-  .app-wrapper {
-    flex-direction: column;
-  }
-  
   .sidebar {
     width: 100%;
-    height: auto;
-    position: static;
-    padding: 0.75rem 1rem;
+    height: 60px;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    padding: 0 1rem;
     flex-direction: row;
     justify-content: space-between;
     align-items: center;
     border-right: none;
     border-bottom: 1px solid var(--border-color);
+    background: rgba(11, 15, 25, 0.85);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    z-index: 1000;
   }
   
   .sidebar-brand {
@@ -457,42 +460,81 @@ input:focus, select:focus, textarea:focus {
   }
 
   .sidebar h1 {
-    font-size: 1.25rem;
+    font-size: 1.1rem;
     flex-direction: row;
     align-items: center;
     gap: 0.25rem;
   }
 
   .sidebar-menu {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 65px;
+    background: rgba(15, 23, 42, 0.95);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border-top: 1px solid var(--border-color);
+    display: flex;
     flex-direction: row;
-    gap: 0.25rem;
-    margin-left: auto;
-    flex: none;
+    justify-content: space-around;
+    align-items: center;
+    margin: 0;
+    padding: 0 0.5rem;
+    z-index: 1000;
   }
 
   .sidebar-item {
-    padding: 0.5rem 0.75rem;
-    font-size: 0.85rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.15rem;
+    padding: 0.5rem 0.25rem;
+    background: transparent;
+    border: none;
+    width: auto;
+    font-size: 0.7rem;
+    color: var(--text-secondary);
   }
 
   .sidebar-item span {
-    display: none; /* Hide labels to save space */
+    display: block;
+    font-size: 0.65rem;
+  }
+
+  .sidebar-item.active {
+    border-left: none;
+    border-bottom: 3px solid var(--accent-color);
+    border-radius: 0;
+    padding-left: 0.25rem;
+    color: var(--text-primary);
+    background: transparent;
   }
 
   .sidebar-footer {
     margin-top: 0;
     padding-top: 0;
     border-top: none;
+    display: flex;
+    flex-direction: row;
+    gap: 0.5rem;
   }
 
   .sidebar-footer .sidebar-item {
     padding: 0.5rem;
+    flex-direction: row;
+  }
+  
+  .sidebar-footer .sidebar-item span {
+    display: none; /* Hide reset/logout text on mobile top header */
   }
   
   .main-content {
     margin-left: 0;
     width: 100%;
-    padding: 1.5rem 1rem;
+    padding: calc(60px + 1.5rem) 1rem calc(65px + 1.5rem) 1rem;
   }
 }
 
