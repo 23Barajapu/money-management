@@ -164,6 +164,19 @@ input, select, textarea {
   transition: border-color var(--transition-speed), box-shadow var(--transition-speed);
 }
 
+input[type="date"] {
+  width: 100% !important;
+  box-sizing: border-box !important;
+  display: block !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+}
+
+input[type="date"]::-webkit-date-and-time-value {
+  text-align: left;
+  min-height: 1.2em;
+}
+
 input:focus, select:focus, textarea:focus {
   outline: none;
   border-color: var(--accent-color);
