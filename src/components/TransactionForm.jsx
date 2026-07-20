@@ -1,14 +1,31 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { PlusCircle, ArrowDownCircle, ArrowUpCircle, RefreshCw } from 'lucide-react';
 
-export default function TransactionForm({ onAddTransaction }) {
-  const [type, setType] = useState('income'); // 'income' or 'expense'
+export default function TransactionForm({ onAddTransaction, wallets = [] }) {
+  const [type, setType] = useState('income'); // 'income', 'expense', or 'transfer'
   const [title, setTitle] = useState('');
   const [amount, setAmount] = useState('');
   const [category, setCategory] = useState('');
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+  const [paymentMethod, setPaymentMethod] = useState('');
+  const [destinationWalletId, setDestinationWalletId] = useState('');
 
-  const [paymentMethod, setPaymentMethod] = useState('cash'); // 'cash' or 'cashless'
+  // Fallback if wallets are not fetched yet
+  const activeWallets = wallets.length > 0 ? wallets : [
+    { id: 'wallet_cash', name: 'Dompet Cash', type: 'cash' },
+    { id: 'wallet_cashless', name: 'Rekening Bank', type: 'cashless' }
+  ];
+
+  useEffect(() => {
+    if (activeWallets.length > 0) {
+      if (!paymentMethod) {
+        setPaymentMethod(activeWallets[0].id);
+      }
+      if (!destinationWalletId && activeWallets.length > 1) {
+        setDestinationWalletId(activeWallets[1].id);
+      }
+    }
+  }, [wallets]);
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -19,7 +36,7 @@ export default function TransactionForm({ onAddTransaction }) {
       type,
       title: type === 'transfer' ? (title || 'Transfer Saldo') : title,
       amount: parseFloat(amount),
-      category: type === 'transfer' ? 'Transfer' : category,
+      category: type === 'transfer' ? destinationWalletId : category,
       date,
       payment_method: paymentMethod,
     });
@@ -69,7 +86,7 @@ export default function TransactionForm({ onAddTransaction }) {
           <label>Judul Transaksi</label>
           <input
             type="text"
-            placeholder="e.g. Gaji Bulanan, Beli Kopi"
+            placeholder={type === 'transfer' ? "e.g. Kirim Uang" : "e.g. Gaji Bulanan, Beli Kopi"}
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             required
@@ -104,26 +121,35 @@ export default function TransactionForm({ onAddTransaction }) {
           </div>
         )}
 
-        <div className="form-group">
-          <label>{type === 'transfer' ? 'Arah Transfer' : 'Metode Pembayaran'}</label>
-          <select
-            value={paymentMethod}
-            onChange={(e) => setPaymentMethod(e.target.value)}
-            required
-          >
-            {type === 'transfer' ? (
-              <>
-                <option value="cash">Cash ke Cashless</option>
-                <option value="cashless">Cashless ke Cash</option>
-              </>
-            ) : (
-              <>
-                <option value="cash">Cash (Tunai)</option>
-                <option value="cashless">Cashless (Digital/Transfer)</option>
-              </>
-            )}
-          </select>
-        </div>
+        {type === 'transfer' ? (
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+            <div className="form-group">
+              <label>Dari Dompet</label>
+              <select value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value)} required>
+                {activeWallets.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
+              </select>
+            </div>
+            <div className="form-group">
+              <label>Ke Dompet</label>
+              <select value={destinationWalletId} onChange={(e) => setDestinationWalletId(e.target.value)} required>
+                {activeWallets.filter(w => w.id !== paymentMethod).map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
+              </select>
+            </div>
+          </div>
+        ) : (
+          <div className="form-group">
+            <label>Sumber Dompet / Rekening</label>
+            <select
+              value={paymentMethod}
+              onChange={(e) => setPaymentMethod(e.target.value)}
+              required
+            >
+              {activeWallets.map(w => (
+                <option key={w.id} value={w.id}>{w.name} ({w.type === 'cash' ? 'Cash' : 'Cashless'})</option>
+              ))}
+            </select>
+          </div>
+        )}
 
         <div className="form-group">
           <label>Tanggal</label>

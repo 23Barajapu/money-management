@@ -21,6 +21,7 @@ import BudgetAndSavings from './components/BudgetAndSavings';
 import Reminders from './components/Reminders';
 import AdvancedAnalytics from './components/AdvancedAnalytics';
 import ExportData from './components/ExportData';
+import WalletManager from './components/WalletManager';
 import Auth from './components/Auth';
 
 export default function App() {
@@ -29,6 +30,7 @@ export default function App() {
   const [transactions, setTransactions] = useState([]);
   const [installments, setInstallments] = useState([]);
   const [filter, setFilter] = useState('all');
+  const [wallets, setWallets] = useState([]);
   const [activeTab, setActiveTab] = useState('dashboard'); // 'dashboard', 'transactions', 'savings', 'installments', 'reminders', 'analytics'
   const [rates, setRates] = useState({ USD: 0.000062, EUR: 0.000057, SGD: 0.000083 });
   const [currency, setCurrency] = useState('IDR');
@@ -91,6 +93,21 @@ export default function App() {
         monthlyPayment: parseFloat(inst.monthly_payment)
       })));
 
+      // 4. Fetch wallets
+      const { data: wlData, error: wlErr } = await supabase
+        .from('wallets')
+        .select('*');
+      if (!wlErr && wlData && wlData.length > 0) {
+        setWallets(wlData);
+      } else {
+        const defaultWallets = [
+          { id: 'wallet_cash', user_id: userId, name: 'Dompet Cash', balance: 0, type: 'cash' },
+          { id: 'wallet_cashless', user_id: userId, name: 'Rekening Bank', balance: 0, type: 'cashless' }
+        ];
+        await supabase.from('wallets').upsert(defaultWallets);
+        setWallets(defaultWallets);
+      }
+
     } catch (err) {
       console.error('Error fetching data:', err.message);
     } finally {
@@ -115,61 +132,49 @@ export default function App() {
     .filter(t => t.type === 'withdraw')
     .reduce((sum, t) => sum + t.amount, 0), [transactions]);
 
-  // Cash Calculations
-  const cashIncome = useMemo(() => transactions
-    .filter(t => t.type === 'income' && (t.payment_method || 'cash') === 'cash')
-    .reduce((sum, t) => sum + t.amount, 0), [transactions]);
+  // Dynamic Wallet Calculations
+  const walletsWithUpdatedBalances = useMemo(() => {
+    return wallets.map(wallet => {
+      const walletTx = transactions.filter(t => t.payment_method === wallet.id || t.payment_method === wallet.name);
+      
+      const income = walletTx
+        .filter(t => t.type === 'income')
+        .reduce((sum, t) => sum + t.amount, 0);
 
-  const cashExpense = useMemo(() => transactions
-    .filter(t => t.type === 'expense' && (t.payment_method || 'cash') === 'cash')
-    .reduce((sum, t) => sum + t.amount, 0), [transactions]);
+      const expense = walletTx
+        .filter(t => t.type === 'expense' || t.type === 'deposit')
+        .reduce((sum, t) => sum + t.amount, 0);
 
-  const cashDeposits = useMemo(() => transactions
-    .filter(t => t.type === 'deposit' && (t.payment_method || 'cash') === 'cash')
-    .reduce((sum, t) => sum + t.amount, 0), [transactions]);
+      const withdrawals = walletTx
+        .filter(t => t.type === 'withdraw')
+        .reduce((sum, t) => sum + t.amount, 0);
 
-  const cashWithdrawals = useMemo(() => transactions
-    .filter(t => t.type === 'withdraw' && (t.payment_method || 'cash') === 'cash')
-    .reduce((sum, t) => sum + t.amount, 0), [transactions]);
+      const transferIn = transactions
+        .filter(t => t.type === 'transfer' && t.category === wallet.id)
+        .reduce((sum, t) => sum + t.amount, 0);
 
-  const cashTransferIn = useMemo(() => transactions
-    .filter(t => t.type === 'transfer' && t.payment_method === 'cashless')
-    .reduce((sum, t) => sum + t.amount, 0), [transactions]);
+      const transferOut = transactions
+        .filter(t => t.type === 'transfer' && t.payment_method === wallet.id)
+        .reduce((sum, t) => sum + t.amount, 0);
 
-  const cashTransferOut = useMemo(() => transactions
-    .filter(t => t.type === 'transfer' && (t.payment_method || 'cash') === 'cash')
-    .reduce((sum, t) => sum + t.amount, 0), [transactions]);
+      return {
+        ...wallet,
+        balance: parseFloat(wallet.balance || 0) + income - expense + withdrawals + transferIn - transferOut
+      };
+    });
+  }, [wallets, transactions]);
 
-  const cashBalance = useMemo(() => cashIncome - cashExpense - cashDeposits + cashWithdrawals + cashTransferIn - cashTransferOut,
-    [cashIncome, cashExpense, cashDeposits, cashWithdrawals, cashTransferIn, cashTransferOut]);
+  const cashBalance = useMemo(() => {
+    return walletsWithUpdatedBalances
+      .filter(w => w.type === 'cash')
+      .reduce((sum, w) => sum + w.balance, 0);
+  }, [walletsWithUpdatedBalances]);
 
-  // Cashless Calculations
-  const cashlessIncome = useMemo(() => transactions
-    .filter(t => t.type === 'income' && t.payment_method === 'cashless')
-    .reduce((sum, t) => sum + t.amount, 0), [transactions]);
-
-  const cashlessExpense = useMemo(() => transactions
-    .filter(t => t.type === 'expense' && t.payment_method === 'cashless')
-    .reduce((sum, t) => sum + t.amount, 0), [transactions]);
-
-  const cashlessDeposits = useMemo(() => transactions
-    .filter(t => t.type === 'deposit' && t.payment_method === 'cashless')
-    .reduce((sum, t) => sum + t.amount, 0), [transactions]);
-
-  const cashlessWithdrawals = useMemo(() => transactions
-    .filter(t => t.type === 'withdraw' && t.payment_method === 'cashless')
-    .reduce((sum, t) => sum + t.amount, 0), [transactions]);
-
-  const cashlessTransferIn = useMemo(() => transactions
-    .filter(t => t.type === 'transfer' && (t.payment_method || 'cash') === 'cash')
-    .reduce((sum, t) => sum + t.amount, 0), [transactions]);
-
-  const cashlessTransferOut = useMemo(() => transactions
-    .filter(t => t.type === 'transfer' && t.payment_method === 'cashless')
-    .reduce((sum, t) => sum + t.amount, 0), [transactions]);
-
-  const cashlessBalance = useMemo(() => cashlessIncome - cashlessExpense - cashlessDeposits + cashlessWithdrawals + cashlessTransferIn - cashlessTransferOut,
-    [cashlessIncome, cashlessExpense, cashlessDeposits, cashlessWithdrawals, cashlessTransferIn, cashlessTransferOut]);
+  const cashlessBalance = useMemo(() => {
+    return walletsWithUpdatedBalances
+      .filter(w => w.type === 'cashless')
+      .reduce((sum, w) => sum + w.balance, 0);
+  }, [walletsWithUpdatedBalances]);
 
   // Total Balance
   const balance = useMemo(() => cashBalance + cashlessBalance, [cashBalance, cashlessBalance]);
@@ -326,6 +331,11 @@ export default function App() {
       const converted = (num || 0) * (rates[currency] || 1);
       return new Intl.NumberFormat('en-US', { style: 'currency', currency: currency, maximumFractionDigits: 2 }).format(converted);
     }
+  };
+
+  const getWalletName = (id) => {
+    const w = wallets.find(x => x.id === id);
+    return w ? w.name : id;
   };
 
   const filteredTransactions = useMemo(() => {
@@ -491,13 +501,20 @@ export default function App() {
             </div>
 
             <DashboardCharts transactions={transactions} />
+            <div style={{ marginTop: '1.5rem' }}>
+              <WalletManager 
+                wallets={walletsWithUpdatedBalances} 
+                fetchUserData={fetchUserData} 
+                formatIDR={formatIDR} 
+              />
+            </div>
           </div>
         )}
 
         {/* Tab 2: Transactions */}
         {activeTab === 'transactions' && (
           <div className="main-grid" style={{ gridTemplateColumns: '1fr' }}>
-            <TransactionForm onAddTransaction={handleAddTransaction} />
+            <TransactionForm onAddTransaction={handleAddTransaction} wallets={walletsWithUpdatedBalances} />
             
             <div className="card">
               <div className="list-header">
@@ -519,7 +536,11 @@ export default function App() {
                       <div className="item-info">
                         <span className="item-title">{tx.title}</span>
                         <span className="item-meta">
-                          {tx.category} • {tx.payment_method === 'cashless' ? (tx.type === 'transfer' ? 'Cashless → Cash' : 'Cashless') : (tx.type === 'transfer' ? 'Cash → Cashless' : 'Cash')} • {tx.date}
+                          {tx.type === 'transfer' ? (
+                            `Transfer: ${getWalletName(tx.payment_method)} → ${getWalletName(tx.category)}`
+                          ) : (
+                            `${tx.category} • ${getWalletName(tx.payment_method)}`
+                          )} • {tx.date}
                         </span>
                       </div>
                       <div className="item-amount-action">
