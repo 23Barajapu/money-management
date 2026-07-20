@@ -6,8 +6,7 @@ export default function Auth() {
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [isSignUp, setIsSignUp] = useState(false);
-  const [showOtp, setShowOtp] = useState(false);
+  const [mode, setMode] = useState('signin'); // 'signin', 'signup', 'signup_otp', 'forgot', 'reset_otp', 'new_password'
   const [otpToken, setOtpToken] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [message, setMessage] = useState({ text: '', type: '' });
@@ -29,38 +28,68 @@ export default function Auth() {
     }
   };
 
-  const handleAuth = async (e) => {
+  const handleAuthSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     setMessage({ text: '', type: '' });
 
     try {
-      if (showOtp) {
-        const { error } = await supabase.auth.verifyOtp({
-          email,
-          token: otpToken,
-          type: 'signup'
-        });
+      if (mode === 'signin') {
+        const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
-        setMessage({ text: 'Verifikasi sukses! Akun Anda aktif.', type: 'success' });
-      } else if (isSignUp) {
+      } else if (mode === 'signup') {
         const { data, error } = await supabase.auth.signUp({ email, password });
         if (error) throw error;
         
         if (data?.user && data.user.identities && data.user.identities.length === 0) {
           throw new Error('Email sudah terdaftar!');
         }
-
-        setShowOtp(true);
-        setMessage({ text: 'Registrasi sukses! Masukkan 6 digit kode OTP yang dikirim ke email Anda.', type: 'success' });
-      } else {
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
+        
+        setMode('signup_otp');
+        setMessage({ text: 'Registrasi sukses! Masukkan 6 digit kode OTP dari email Anda.', type: 'success' });
+      } else if (mode === 'signup_otp') {
+        const { error } = await supabase.auth.verifyOtp({
+          email,
+          token: otpToken,
+          type: 'signup'
+        });
         if (error) throw error;
+        setMessage({ text: 'Verifikasi sukses! Akun aktif.', type: 'success' });
+      } else if (mode === 'forgot') {
+        const { error } = await supabase.auth.resetPasswordForEmail(email);
+        if (error) throw error;
+        setMode('reset_otp');
+        setMessage({ text: 'Kode reset terkirim! Periksa inbox email Anda.', type: 'success' });
+      } else if (mode === 'reset_otp') {
+        const { error } = await supabase.auth.verifyOtp({
+          email,
+          token: otpToken,
+          type: 'recovery'
+        });
+        if (error) throw error;
+        setMode('new_password');
+        setMessage({ text: 'Kode terverifikasi! Masukkan password baru Anda.', type: 'success' });
+      } else if (mode === 'new_password') {
+        const { error } = await supabase.auth.updateUser({ password });
+        if (error) throw error;
+        setMode('signin');
+        setMessage({ text: 'Password berhasil diperbarui! Silakan masuk.', type: 'success' });
       }
     } catch (error) {
       setMessage({ text: error.message || 'Terjadi kesalahan!', type: 'error' });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const getSubtitle = () => {
+    switch (mode) {
+      case 'signup': return 'Buat akun untuk sinkronisasi cloud';
+      case 'signup_otp': return 'Verifikasi kode pendaftaran Anda';
+      case 'forgot': return 'Masukkan email untuk merestart password';
+      case 'reset_otp': return 'Verifikasi kode reset dari email Anda';
+      case 'new_password': return 'Buat password baru Anda';
+      default: return 'Masuk untuk sinkronisasi cloud';
     }
   };
 
@@ -71,7 +100,7 @@ export default function Auth() {
           Money <span>Management</span>
         </h2>
         <p style={{ textAlign: 'center', color: 'var(--text-secondary)', fontSize: '0.875rem', marginBottom: '2rem' }}>
-          {showOtp ? 'Verifikasi email Anda' : isSignUp ? 'Buat akun untuk sinkronisasi cloud' : 'Masuk untuk sinkronisasi cloud'}
+          {getSubtitle()}
         </p>
 
         {message.text && (
@@ -88,10 +117,28 @@ export default function Auth() {
           </div>
         )}
 
-        {showOtp ? (
-          <form onSubmit={handleAuth}>
+        <form onSubmit={handleAuthSubmit}>
+          {/* Email Field (Visible in signin, signup, forgot, reset_otp) */}
+          {(mode === 'signin' || mode === 'signup' || mode === 'forgot' || mode === 'reset_otp') && (
+            <div className="form-group">
+              <label style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                <Mail size={14} /> Email
+              </label>
+              <input
+                type="email"
+                placeholder="nama@email.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                disabled={mode === 'reset_otp'} // Lock email during OTP verification
+              />
+            </div>
+          )}
+
+          {/* OTP Token Field (Visible in signup_otp, reset_otp) */}
+          {(mode === 'signup_otp' || mode === 'reset_otp') && (
             <div className="form-group" style={{ marginBottom: '1.5rem' }}>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>Kode Verifikasi (OTP)</label>
+              <label>Kode Verifikasi (OTP)</label>
               <input
                 type="text"
                 placeholder="e.g. 123456"
@@ -103,89 +150,77 @@ export default function Auth() {
                 style={{ textAlign: 'center', fontSize: '1.25rem', letterSpacing: '0.25rem' }}
               />
             </div>
+          )}
 
-            <button type="submit" className="btn-submit" disabled={loading} style={{ marginBottom: '0.75rem' }}>
-              {loading ? (
-                <Loader2 className="animate-spin" size={18} />
-              ) : (
-                'Verifikasi Akun'
-              )}
-            </button>
-
-            <button 
-              type="button" 
-              className="btn-submit" 
-              onClick={() => { setShowOtp(false); setMessage({ text: '', type: '' }); }}
-              style={{ 
-                background: 'transparent', 
-                border: '1px solid var(--border-color)', 
-                color: 'var(--text-secondary)',
-                marginBottom: '0.5rem'
-              }}
-            >
-              Batal
-            </button>
-          </form>
-        ) : (
-          <>
-            <form onSubmit={handleAuth}>
-              <div className="form-group">
-                <label style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                  <Mail size={14} /> Email
-                </label>
+          {/* Password Field (Visible in signin, signup, new_password) */}
+          {(mode === 'signin' || mode === 'signup' || mode === 'new_password') && (
+            <div className="form-group" style={{ marginBottom: '1.5rem' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                <Lock size={14} /> {mode === 'new_password' ? 'Password Baru' : 'Password'}
+              </label>
+              <div style={{ position: 'relative' }}>
                 <input
-                  type="email"
-                  placeholder="nama@email.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  type={showPassword ? 'text' : 'password'}
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
                   required
+                  minLength="6"
+                  style={{ paddingRight: '2.5rem' }}
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  style={{
+                    position: 'absolute',
+                    right: '0.75rem',
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    background: 'none',
+                    border: 'none',
+                    color: 'var(--text-secondary)',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    padding: 0
+                  }}
+                >
+                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
               </div>
+            </div>
+          )}
 
-              <div className="form-group" style={{ marginBottom: '1.5rem' }}>
-                <label style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                  <Lock size={14} /> Password
-                </label>
-                <div style={{ position: 'relative' }}>
-                  <input
-                    type={showPassword ? 'text' : 'password'}
-                    placeholder="••••••••"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                    minLength="6"
-                    style={{ paddingRight: '2.5rem' }}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    style={{
-                      position: 'absolute',
-                      right: '0.75rem',
-                      top: '50%',
-                      transform: 'translateY(-50%)',
-                      background: 'none',
-                      border: 'none',
-                      color: 'var(--text-secondary)',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      padding: 0
-                    }}
-                  >
-                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                  </button>
-                </div>
-              </div>
+          {/* Submit Button */}
+          <button type="submit" className="btn-submit" disabled={loading} style={{ marginBottom: '0.75rem' }}>
+            {loading ? (
+              <Loader2 className="animate-spin" size={18} />
+            ) : mode === 'signin' ? (
+              'Masuk'
+            ) : mode === 'signup' ? (
+              'Daftar Sekarang'
+            ) : mode === 'forgot' ? (
+              'Kirim OTP Reset'
+            ) : mode === 'new_password' ? (
+              'Perbarui Password'
+            ) : (
+              'Verifikasi Kode'
+            )}
+          </button>
+        </form>
 
-              <button type="submit" className="btn-submit" disabled={loading} style={{ marginBottom: '0.75rem' }}>
-                {loading ? (
-                  <Loader2 className="animate-spin" size={18} />
-                ) : (
-                  isSignUp ? 'Daftar Sekarang' : 'Masuk'
-                )}
+        {/* Footer Navigation */}
+        {mode === 'signin' && (
+          <>
+            <div style={{ textAlign: 'right', marginBottom: '1rem' }}>
+              <button
+                type="button"
+                onClick={() => { setMode('forgot'); setMessage({ text: '', type: '' }); }}
+                style={{ background: 'none', border: 'none', color: 'var(--accent-color)', cursor: 'pointer', fontSize: '0.8rem' }}
+              >
+                Lupa Password?
               </button>
-            </form>
+            </div>
 
             <div style={{ position: 'relative', textAlign: 'center', margin: '1.5rem 0' }}>
               <div style={{ position: 'absolute', top: '50%', left: 0, right: 0, height: '1px', background: 'var(--border-color)', zIndex: 1 }}></div>
@@ -211,25 +246,47 @@ export default function Auth() {
               </svg>
               Masuk dengan Google
             </button>
+          </>
+        )}
 
-            <div style={{ text_align: 'center', fontSize: '0.85rem', color: 'var(--text-secondary)', textAlign: 'center' }}>
-              {isSignUp ? 'Sudah punya akun? ' : 'Belum punya akun? '}
+        {/* Mode Switchers */}
+        {(mode === 'signin' || mode === 'signup') ? (
+          <div style={{ textAlign: 'center', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+            {mode === 'signup' ? 'Sudah punya akun? ' : 'Belum punya akun? '}
+            <button 
+              type="button"
+              onClick={() => { setMode(mode === 'signup' ? 'signin' : 'signup'); setMessage({ text: '', type: '' }); }}
+              style={{ 
+                background: 'none', 
+                border: 'none', 
+                color: 'var(--accent-color)', 
+                cursor: 'pointer', 
+                fontWeight: 600,
+                textDecoration: 'underline'
+              }}
+            >
+              {mode === 'signup' ? 'Masuk' : 'Daftar'}
+            </button>
+          </div>
+        ) : (
+          /* Show back button for verification or forgot modes */
+          mode !== 'signup_otp' && (
+            <div style={{ textAlign: 'center', fontSize: '0.85rem', marginTop: '1rem' }}>
               <button 
                 type="button"
-                onClick={() => { setIsSignUp(!isSignUp); setMessage({ text: '', type: '' }); }}
+                onClick={() => { setMode('signin'); setMessage({ text: '', type: '' }); }}
                 style={{ 
                   background: 'none', 
                   border: 'none', 
-                  color: 'var(--accent-color)', 
+                  color: 'var(--text-secondary)', 
                   cursor: 'pointer', 
-                  fontWeight: 600,
-                  textDecoration: 'underline'
+                  fontWeight: 600
                 }}
               >
-                {isSignUp ? 'Masuk' : 'Daftar'}
+                Kembali ke Login
               </button>
             </div>
-          </>
+          )
         )}
       </div>
     </div>
