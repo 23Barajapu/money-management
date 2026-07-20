@@ -132,8 +132,16 @@ export default function App() {
     .filter(t => t.type === 'withdraw' && (t.payment_method || 'cash') === 'cash')
     .reduce((sum, t) => sum + t.amount, 0), [transactions]);
 
-  const cashBalance = useMemo(() => cashIncome - cashExpense - cashDeposits + cashWithdrawals,
-    [cashIncome, cashExpense, cashDeposits, cashWithdrawals]);
+  const cashTransferIn = useMemo(() => transactions
+    .filter(t => t.type === 'transfer' && t.payment_method === 'cashless')
+    .reduce((sum, t) => sum + t.amount, 0), [transactions]);
+
+  const cashTransferOut = useMemo(() => transactions
+    .filter(t => t.type === 'transfer' && (t.payment_method || 'cash') === 'cash')
+    .reduce((sum, t) => sum + t.amount, 0), [transactions]);
+
+  const cashBalance = useMemo(() => cashIncome - cashExpense - cashDeposits + cashWithdrawals + cashTransferIn - cashTransferOut,
+    [cashIncome, cashExpense, cashDeposits, cashWithdrawals, cashTransferIn, cashTransferOut]);
 
   // Cashless Calculations
   const cashlessIncome = useMemo(() => transactions
@@ -152,8 +160,16 @@ export default function App() {
     .filter(t => t.type === 'withdraw' && t.payment_method === 'cashless')
     .reduce((sum, t) => sum + t.amount, 0), [transactions]);
 
-  const cashlessBalance = useMemo(() => cashlessIncome - cashlessExpense - cashlessDeposits + cashlessWithdrawals,
-    [cashlessIncome, cashlessExpense, cashlessDeposits, cashlessWithdrawals]);
+  const cashlessTransferIn = useMemo(() => transactions
+    .filter(t => t.type === 'transfer' && (t.payment_method || 'cash') === 'cash')
+    .reduce((sum, t) => sum + t.amount, 0), [transactions]);
+
+  const cashlessTransferOut = useMemo(() => transactions
+    .filter(t => t.type === 'transfer' && t.payment_method === 'cashless')
+    .reduce((sum, t) => sum + t.amount, 0), [transactions]);
+
+  const cashlessBalance = useMemo(() => cashlessIncome - cashlessExpense - cashlessDeposits + cashlessWithdrawals + cashlessTransferIn - cashlessTransferOut,
+    [cashlessIncome, cashlessExpense, cashlessDeposits, cashlessWithdrawals, cashlessTransferIn, cashlessTransferOut]);
 
   // Total Balance
   const balance = useMemo(() => cashBalance + cashlessBalance, [cashBalance, cashlessBalance]);
@@ -493,15 +509,18 @@ export default function App() {
                     <div key={tx.id} className="list-item">
                       <div className="item-info">
                         <span className="item-title">{tx.title}</span>
-                        <span className="item-meta">{tx.category} • {tx.date}</span>
+                        <span className="item-meta">
+                          {tx.category} • {tx.payment_method === 'cashless' ? (tx.type === 'transfer' ? 'Cashless → Cash' : 'Cashless') : (tx.type === 'transfer' ? 'Cash → Cashless' : 'Cash')} • {tx.date}
+                        </span>
                       </div>
                       <div className="item-amount-action">
                         <span className={`item-amount ${
                           tx.type === 'income' ? 'income' : 
                           tx.type === 'expense' ? 'expense' : 
-                          tx.type === 'deposit' ? 'expense' : 'income'
+                          tx.type === 'deposit' ? 'expense' : 
+                          tx.type === 'transfer' ? 'saving' : 'income'
                         }`}>
-                          {tx.type === 'income' || tx.type === 'withdraw' ? '+' : '-'} {formatIDR(tx.amount)}
+                          {tx.type === 'income' || tx.type === 'withdraw' ? '+' : tx.type === 'transfer' ? '⇄' : '-'} {formatIDR(tx.amount)}
                         </span>
                         <button 
                           onClick={() => handleDeleteTransaction(tx.id)}

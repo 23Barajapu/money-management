@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { PlusCircle, ArrowDownCircle, ArrowUpCircle } from 'lucide-react';
+import { PlusCircle, ArrowDownCircle, ArrowUpCircle, RefreshCw } from 'lucide-react';
 
 export default function TransactionForm({ onAddTransaction }) {
   const [type, setType] = useState('income'); // 'income' or 'expense'
@@ -12,14 +12,14 @@ export default function TransactionForm({ onAddTransaction }) {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (!title || !amount || !category) return;
+    if (!title || !amount || (type !== 'transfer' && !category)) return;
 
     onAddTransaction({
       id: Date.now().toString(),
       type,
-      title,
+      title: type === 'transfer' ? (title || 'Transfer Saldo') : title,
       amount: parseFloat(amount),
-      category,
+      category: type === 'transfer' ? 'Transfer' : category,
       date,
       payment_method: paymentMethod,
     });
@@ -55,6 +55,14 @@ export default function TransactionForm({ onAddTransaction }) {
             <ArrowDownCircle size={16} style={{ marginRight: '0.25rem', verticalAlign: 'middle' }} />
             Pengeluaran
           </button>
+          <button
+            type="button"
+            className={`btn-toggle transfer ${type === 'transfer' ? 'active' : ''}`}
+            onClick={() => { setType('transfer'); setCategory('Transfer'); }}
+          >
+            <RefreshCw size={16} style={{ marginRight: '0.25rem', verticalAlign: 'middle' }} />
+            Transfer
+          </button>
         </div>
 
         <div className="form-group">
@@ -80,29 +88,40 @@ export default function TransactionForm({ onAddTransaction }) {
           />
         </div>
 
-        <div className="form-group">
-          <label>Kategori</label>
-          <select
-            value={category}
-            onChange={(e) => setCategory(e.target.value)}
-            required
-          >
-            <option value="" disabled>Pilih Kategori</option>
-            {categories[type].map((cat) => (
-              <option key={cat} value={cat}>{cat}</option>
-            ))}
-          </select>
-        </div>
+        {type !== 'transfer' && (
+          <div className="form-group">
+            <label>Kategori</label>
+            <select
+              value={category}
+              onChange={(e) => setCategory(e.target.value)}
+              required
+            >
+              <option value="" disabled>Pilih Kategori</option>
+              {categories[type].map((cat) => (
+                <option key={cat} value={cat}>{cat}</option>
+              ))}
+            </select>
+          </div>
+        )}
 
         <div className="form-group">
-          <label>Metode Pembayaran</label>
+          <label>{type === 'transfer' ? 'Arah Transfer' : 'Metode Pembayaran'}</label>
           <select
             value={paymentMethod}
             onChange={(e) => setPaymentMethod(e.target.value)}
             required
           >
-            <option value="cash">Cash (Tunai)</option>
-            <option value="cashless">Cashless (Digital/Transfer)</option>
+            {type === 'transfer' ? (
+              <>
+                <option value="cash">Cash ke Cashless</option>
+                <option value="cashless">Cashless ke Cash</option>
+              </>
+            ) : (
+              <>
+                <option value="cash">Cash (Tunai)</option>
+                <option value="cashless">Cashless (Digital/Transfer)</option>
+              </>
+            )}
           </select>
         </div>
 
