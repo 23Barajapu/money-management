@@ -115,8 +115,48 @@ export default function App() {
     .filter(t => t.type === 'withdraw')
     .reduce((sum, t) => sum + t.amount, 0), [transactions]);
 
-  const balance = useMemo(() => totalIncome - totalExpense - totalDeposits + totalWithdrawals, 
-    [totalIncome, totalExpense, totalDeposits, totalWithdrawals]);
+  // Cash Calculations
+  const cashIncome = useMemo(() => transactions
+    .filter(t => t.type === 'income' && (t.payment_method || 'cash') === 'cash')
+    .reduce((sum, t) => sum + t.amount, 0), [transactions]);
+
+  const cashExpense = useMemo(() => transactions
+    .filter(t => t.type === 'expense' && (t.payment_method || 'cash') === 'cash')
+    .reduce((sum, t) => sum + t.amount, 0), [transactions]);
+
+  const cashDeposits = useMemo(() => transactions
+    .filter(t => t.type === 'deposit' && (t.payment_method || 'cash') === 'cash')
+    .reduce((sum, t) => sum + t.amount, 0), [transactions]);
+
+  const cashWithdrawals = useMemo(() => transactions
+    .filter(t => t.type === 'withdraw' && (t.payment_method || 'cash') === 'cash')
+    .reduce((sum, t) => sum + t.amount, 0), [transactions]);
+
+  const cashBalance = useMemo(() => cashIncome - cashExpense - cashDeposits + cashWithdrawals,
+    [cashIncome, cashExpense, cashDeposits, cashWithdrawals]);
+
+  // Cashless Calculations
+  const cashlessIncome = useMemo(() => transactions
+    .filter(t => t.type === 'income' && t.payment_method === 'cashless')
+    .reduce((sum, t) => sum + t.amount, 0), [transactions]);
+
+  const cashlessExpense = useMemo(() => transactions
+    .filter(t => t.type === 'expense' && t.payment_method === 'cashless')
+    .reduce((sum, t) => sum + t.amount, 0), [transactions]);
+
+  const cashlessDeposits = useMemo(() => transactions
+    .filter(t => t.type === 'deposit' && t.payment_method === 'cashless')
+    .reduce((sum, t) => sum + t.amount, 0), [transactions]);
+
+  const cashlessWithdrawals = useMemo(() => transactions
+    .filter(t => t.type === 'withdraw' && t.payment_method === 'cashless')
+    .reduce((sum, t) => sum + t.amount, 0), [transactions]);
+
+  const cashlessBalance = useMemo(() => cashlessIncome - cashlessExpense - cashlessDeposits + cashlessWithdrawals,
+    [cashlessIncome, cashlessExpense, cashlessDeposits, cashlessWithdrawals]);
+
+  // Total Balance
+  const balance = useMemo(() => cashBalance + cashlessBalance, [cashBalance, cashlessBalance]);
 
   const currentSaved = useMemo(() => totalDeposits - totalWithdrawals, 
     [totalDeposits, totalWithdrawals]);
@@ -151,16 +191,17 @@ export default function App() {
     const userId = session.user.id;
     try {
       const { error } = await supabase
-        .from('transactions')
-        .insert({
-          id: newTx.id,
-          user_id: userId,
-          type: newTx.type,
-          title: newTx.title,
-          amount: newTx.amount,
-          category: newTx.category,
-          date: newTx.date
-        });
+          .from('transactions')
+          .insert({
+            id: newTx.id,
+            user_id: userId,
+            type: newTx.type,
+            title: newTx.title,
+            amount: newTx.amount,
+            category: newTx.category,
+            date: newTx.date,
+            payment_method: newTx.payment_method || 'cash'
+          });
       if (error) throw error;
       setTransactions(prev => [newTx, ...prev]);
     } catch (err) {
@@ -189,7 +230,8 @@ export default function App() {
         title: type === 'deposit' ? `Setoran: ${updatedSavings.goalName}` : `Penarikan: ${updatedSavings.goalName}`,
         amount: transactionAmount,
         category: 'Tabungan',
-        date: new Date().toISOString().split('T')[0]
+        date: new Date().toISOString().split('T')[0],
+        payment_method: 'cashless'
       };
       await handleAddTransaction(newTx);
     } else {
@@ -249,7 +291,8 @@ export default function App() {
         title: `Bayar Cicilan: ${targetInst.name}`,
         amount: amount,
         category: 'Cicilan',
-        date: new Date().toISOString().split('T')[0]
+        date: new Date().toISOString().split('T')[0],
+        payment_method: 'cashless'
       };
       await handleAddTransaction(newTx);
 
@@ -376,14 +419,28 @@ export default function App() {
         {/* Tab 1: Dashboard */}
         {activeTab === 'dashboard' && (
           <div>
-            {/* Summary Cards */}
+             {/* Summary Cards */}
             <div className="dashboard-summary">
               <div className="card summary-card">
                 <span className="summary-label">
-                  <Wallet size={16} style={{ marginRight: '0.25rem', verticalAlign: 'middle' }} />
-                  Saldo Utama
+                  <Wallet size={16} style={{ marginRight: '0.25rem', verticalAlign: 'middle', color: 'var(--accent-color)' }} />
+                  Total Saldo
                 </span>
                 <span className="summary-value">{formatIDR(balance)}</span>
+              </div>
+              <div className="card summary-card">
+                <span className="summary-label">
+                  <Wallet size={16} style={{ marginRight: '0.25rem', verticalAlign: 'middle', color: '#f59e0b' }} />
+                  Saldo Cash
+                </span>
+                <span className="summary-value" style={{ color: '#f59e0b' }}>{formatIDR(cashBalance)}</span>
+              </div>
+              <div className="card summary-card">
+                <span className="summary-label">
+                  <CreditCard size={16} style={{ marginRight: '0.25rem', verticalAlign: 'middle', color: '#10b981' }} />
+                  Saldo Cashless
+                </span>
+                <span className="summary-value" style={{ color: '#10b981' }}>{formatIDR(cashlessBalance)}</span>
               </div>
               <div className="card summary-card">
                 <span className="summary-label">

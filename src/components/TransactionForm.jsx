@@ -8,6 +8,8 @@ export default function TransactionForm({ onAddTransaction }) {
   const [category, setCategory] = useState('');
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
 
+  const [paymentMethod, setPaymentMethod] = useState('cash'); // 'cash' or 'cashless'
+
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!title || !amount || !category) return;
@@ -19,6 +21,7 @@ export default function TransactionForm({ onAddTransaction }) {
       amount: parseFloat(amount),
       category,
       date,
+      payment_method: paymentMethod,
     });
 
     setTitle('');
@@ -88,6 +91,18 @@ export default function TransactionForm({ onAddTransaction }) {
             {categories[type].map((cat) => (
               <option key={cat} value={cat}>{cat}</option>
             ))}
+          </select>
+        </div>
+
+        <div className="form-group">
+          <label>Metode Pembayaran</label>
+          <select
+            value={paymentMethod}
+            onChange={(e) => setPaymentMethod(e.target.value)}
+            required
+          >
+            <option value="cash">Cash (Tunai)</option>
+            <option value="cashless">Cashless (Digital/Transfer)</option>
           </select>
         </div>
 
