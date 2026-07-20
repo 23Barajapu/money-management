@@ -1,39 +1,102 @@
 import React, { useState, useEffect } from 'react';
-import { PiggyBank, ArrowUpCircle, ArrowDownCircle, Trash2, Wallet, RefreshCw } from 'lucide-react';
+import { 
+  PiggyBank, 
+  ArrowUpCircle, 
+  ArrowDownCircle, 
+  Trash2, 
+  Wallet, 
+  RefreshCw, 
+  LogOut, 
+  LayoutDashboard, 
+  History, 
+  CreditCard 
+} from 'lucide-react';
+import { supabase } from './supabaseClient';
 import TransactionForm from './components/TransactionForm';
 import SavingsTracker from './components/SavingsTracker';
 import DashboardCharts from './components/DashboardCharts';
 import InstallmentTracker from './components/InstallmentTracker';
+import Auth from './components/Auth';
 
 export default function App() {
-  const [transactions, setTransactions] = useState(() => {
-    const saved = localStorage.getItem('momanage_transactions');
-    return saved ? JSON.parse(saved) : [];
-  });
+  const [session, setSession] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [transactions, setTransactions] = useState([]);
+  const [savings, setSavings] = useState({ goalName: '', goalAmount: 0, currentSaved: 0 });
+  const [installments, setInstallments] = useState([]);
+  const [filter, setFilter] = useState('all');
+  const [activeTab, setActiveTab] = useState('dashboard'); // 'dashboard', 'transactions', 'savings', 'installments'
 
-  const [savings, setSavings] = useState(() => {
-    const saved = localStorage.getItem('momanage_savings');
-    return saved ? JSON.parse(saved) : { goalName: '', goalAmount: 0, currentSaved: 0 };
-  });
-
-  const [installments, setInstallments] = useState(() => {
-    const saved = localStorage.getItem('momanage_installments');
-    return saved ? JSON.parse(saved) : [];
-  });
-
-  const [filter, setFilter] = useState('all'); // 'all', 'income', 'expense', 'saving'
-
+  // Monitor Auth Session
   useEffect(() => {
-    localStorage.setItem('momanage_transactions', JSON.stringify(transactions));
-  }, [transactions]);
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setLoading(false);
+    });
 
-  useEffect(() => {
-    localStorage.setItem('momanage_savings', JSON.stringify(savings));
-  }, [savings]);
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+      setLoading(false);
+    });
 
+    return () => subscription.unsubscribe();
+  }, []);
+
+  // Fetch data when session is active
   useEffect(() => {
-    localStorage.setItem('momanage_installments', JSON.stringify(installments));
-  }, [installments]);
+    if (!session) return;
+    fetchUserData();
+  }, [session]);
+
+  const fetchUserData = async () => {
+    setLoading(true);
+    const userId = session.user.id;
+
+    try {
+      // 1. Fetch transactions
+      const { data: txData, error: txErr } = await supabase
+        .from('transactions')
+        .select('*')
+        .order('date', { ascending: false });
+      if (txErr) throw txErr;
+      setTransactions(txData || []);
+
+      // 2. Fetch savings
+      const { data: svData, error: svErr } = await supabase
+        .from('savings')
+        .select('*')
+        .eq('user_id', userId)
+        .maybeSingle();
+      if (svErr) throw svErr;
+      if (svData) {
+        setSavings({
+          goalName: svData.goal_name,
+          goalAmount: parseFloat(svData.goal_amount),
+          currentSaved: parseFloat(svData.current_saved)
+        });
+      } else {
+        setSavings({ goalName: '', goalAmount: 0, currentSaved: 0 });
+      }
+
+      // 3. Fetch installments
+      const { data: instData, error: instErr } = await supabase
+        .from('installments')
+        .select('*');
+      if (instErr) throw instErr;
+      setInstallments((instData || []).map(inst => ({
+        id: inst.id,
+        name: inst.name,
+        totalAmount: parseFloat(inst.total_amount),
+        paidAmount: parseFloat(inst.paid_amount),
+        monthlyPayment: parseFloat(inst.monthly_payment)
+      })));
+
+    } catch (err) {
+      console.error('Error fetching data:', err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Calculations
   const totalIncome = transactions
@@ -55,70 +118,168 @@ export default function App() {
   const balance = totalIncome - totalExpense - totalDeposits + totalWithdrawals;
   const currentSaved = totalDeposits - totalWithdrawals;
 
-  // Sync savings.currentSaved with transactions ledger
+  // Sync savings currentSaved dynamically in DB if mismatched
   useEffect(() => {
-    if (savings.currentSaved !== currentSaved) {
-      setSavings(prev => ({ ...prev, currentSaved }));
+    if (!session || loading) return;
+    if (savings.goalAmount > 0 && savings.currentSaved !== currentSaved) {
+      updateSavingsInDB({ ...savings, currentSaved });
     }
-  }, [currentSaved]);
+  }, [currentSaved, session]);
 
-  const handleAddTransaction = (newTx) => {
-    setTransactions(prev => [newTx, ...prev]);
+  const updateSavingsInDB = async (updated) => {
+    const userId = session.user.id;
+    try {
+      const { error } = await supabase
+        .from('savings')
+        .upsert({
+          user_id: userId,
+          goal_name: updated.goalName,
+          goal_amount: updated.goalAmount,
+          current_saved: updated.currentSaved
+        });
+      if (error) throw error;
+      setSavings(updated);
+    } catch (err) {
+      alert('Gagal memperbarui tabungan: ' + err.message);
+    }
   };
 
-  const handleDeleteTransaction = (id) => {
-    setTransactions(prev => prev.filter(t => t.id !== id));
+  const handleAddTransaction = async (newTx) => {
+    const userId = session.user.id;
+    try {
+      const { error } = await supabase
+        .from('transactions')
+        .insert({
+          id: newTx.id,
+          user_id: userId,
+          type: newTx.type,
+          title: newTx.title,
+          amount: newTx.amount,
+          category: newTx.category,
+          date: newTx.date
+        });
+      if (error) throw error;
+      setTransactions(prev => [newTx, ...prev]);
+    } catch (err) {
+      alert('Gagal menyimpan transaksi: ' + err.message);
+    }
   };
 
-  const handleUpdateSavings = (updatedSavings, transactionAmount, type) => {
-    // If a deposit or withdrawal occurred, add to transactions ledger
+  const handleDeleteTransaction = async (id) => {
+    try {
+      const { error } = await supabase
+        .from('transactions')
+        .delete()
+        .eq('id', id);
+      if (error) throw error;
+      setTransactions(prev => prev.filter(t => t.id !== id));
+    } catch (err) {
+      alert('Gagal menghapus transaksi: ' + err.message);
+    }
+  };
+
+  const handleUpdateSavings = async (updatedSavings, transactionAmount, type) => {
     if (transactionAmount && type) {
       const newTx = {
         id: Date.now().toString(),
-        type, // 'deposit' or 'withdraw'
+        type,
         title: type === 'deposit' ? `Setoran: ${updatedSavings.goalName}` : `Penarikan: ${updatedSavings.goalName}`,
         amount: transactionAmount,
         category: 'Tabungan',
         date: new Date().toISOString().split('T')[0]
       };
-      setTransactions(prev => [newTx, ...prev]);
+      await handleAddTransaction(newTx);
+    } else {
+      await updateSavingsInDB(updatedSavings);
     }
-    setSavings(updatedSavings);
   };
 
-  const handleAddInstallment = (newInst) => {
-    setInstallments(prev => [...prev, newInst]);
+  const handleAddInstallment = async (newInst) => {
+    const userId = session.user.id;
+    try {
+      const { error } = await supabase
+        .from('installments')
+        .insert({
+          id: newInst.id,
+          user_id: userId,
+          name: newInst.name,
+          total_amount: newInst.totalAmount,
+          paid_amount: newInst.paidAmount,
+          monthly_payment: newInst.monthlyPayment
+        });
+      if (error) throw error;
+      setInstallments(prev => [...prev, newInst]);
+    } catch (err) {
+      alert('Gagal menambahkan cicilan: ' + err.message);
+    }
   };
 
-  const handleDeleteInstallment = (id) => {
-    setInstallments(prev => prev.filter(i => i.id !== id));
+  const handleDeleteInstallment = async (id) => {
+    try {
+      const { error } = await supabase
+        .from('installments')
+        .delete()
+        .eq('id', id);
+      if (error) throw error;
+      setInstallments(prev => prev.filter(i => i.id !== id));
+    } catch (err) {
+      alert('Gagal menghapus cicilan: ' + err.message);
+    }
   };
 
-  const handlePayInstallment = (id, amount) => {
-    setInstallments(prev => prev.map(inst => {
-      if (inst.id === id) {
-        return { ...inst, paidAmount: inst.paidAmount + amount };
-      }
-      return inst;
-    }));
+  const handlePayInstallment = async (id, amount) => {
     const targetInst = installments.find(i => i.id === id);
-    const newTx = {
-      id: Date.now().toString(),
-      type: 'expense',
-      title: `Bayar Cicilan: ${targetInst.name}`,
-      amount: amount,
-      category: 'Cicilan',
-      date: new Date().toISOString().split('T')[0]
-    };
-    setTransactions(prev => [newTx, ...prev]);
+    const updatedPaid = targetInst.paidAmount + amount;
+
+    try {
+      // 1. Update installment paid amount in Supabase
+      const { error: instErr } = await supabase
+        .from('installments')
+        .update({ paid_amount: updatedPaid })
+        .eq('id', id);
+      if (instErr) throw instErr;
+
+      // 2. Add expense transaction in Supabase
+      const newTx = {
+        id: Date.now().toString(),
+        type: 'expense',
+        title: `Bayar Cicilan: ${targetInst.name}`,
+        amount: amount,
+        category: 'Cicilan',
+        date: new Date().toISOString().split('T')[0]
+      };
+      await handleAddTransaction(newTx);
+
+      // 3. Update local state
+      setInstallments(prev => prev.map(inst => {
+        if (inst.id === id) {
+          return { ...inst, paidAmount: updatedPaid };
+        }
+        return inst;
+      }));
+    } catch (err) {
+      alert('Gagal membayar cicilan: ' + err.message);
+    }
   };
 
-  const resetData = () => {
-    if (window.confirm('Apakah Anda yakin ingin menghapus semua data?')) {
-      setTransactions([]);
-      setSavings({ goalName: '', goalAmount: 0, currentSaved: 0 });
-      setInstallments([]);
+  const resetData = async () => {
+    if (window.confirm('Apakah Anda yakin ingin menghapus semua data di cloud?')) {
+      try {
+        const userId = session.user.id;
+        await supabase.from('transactions').delete().eq('user_id', userId);
+        await supabase.from('savings').delete().eq('user_id', userId);
+        await supabase.from('installments').delete().eq('user_id', userId);
+        setTransactions([]);
+        setSavings({ goalName: '', goalAmount: 0, currentSaved: 0 });
+        setInstallments([]);
+      } catch (err) {
+        alert('Gagal me-reset data: ' + err.message);
+      }
     }
+  };
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
   };
 
   const formatIDR = (num) => {
@@ -132,119 +293,194 @@ export default function App() {
     return true;
   });
 
-  return (
-    <div className="app-container">
-      <header>
-        <h1>Money <span>Management</span></h1>
-        <button 
-          onClick={resetData}
-          className="btn-filter"
-          style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', color: 'var(--expense-color)', borderColor: 'rgba(239,68,68,0.2)' }}
-        >
-          <RefreshCw size={14} /> Reset Data
-        </button>
-      </header>
-
-      {/* Summary Cards */}
-      <div className="dashboard-summary">
-        <div className="card summary-card">
-          <span className="summary-label">
-            <Wallet size={16} style={{ marginRight: '0.25rem', verticalAlign: 'middle' }} />
-            Saldo Utama
-          </span>
-          <span className="summary-value">{formatIDR(balance)}</span>
-        </div>
-        <div className="card summary-card">
-          <span className="summary-label">
-            <ArrowUpCircle size={16} style={{ marginRight: '0.25rem', verticalAlign: 'middle', color: 'var(--income-color)' }} />
-            Total Pemasukan
-          </span>
-          <span className="summary-value income">{formatIDR(totalIncome)}</span>
-        </div>
-        <div className="card summary-card">
-          <span className="summary-label">
-            <ArrowDownCircle size={16} style={{ marginRight: '0.25rem', verticalAlign: 'middle', color: 'var(--expense-color)' }} />
-            Total Pengeluaran
-          </span>
-          <span className="summary-value expense">{formatIDR(totalExpense)}</span>
-        </div>
-        <div className="card summary-card">
-          <span className="summary-label">
-            <PiggyBank size={16} style={{ marginRight: '0.25rem', verticalAlign: 'middle', color: 'var(--saving-color)' }} />
-            Tabungan
-          </span>
-          <span className="summary-value saving">{formatIDR(currentSaved)}</span>
-        </div>
+  if (loading) {
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh' }}>
+        <div className="empty-state">Memuat data...</div>
       </div>
+    );
+  }
 
-      {/* Main Content Layout */}
-      <div className="main-grid">
-        {/* Left Column */}
-        <div className="grid-column">
-          <TransactionForm onAddTransaction={handleAddTransaction} />
-          
-          {/* History List */}
-          <div className="card">
-            <div className="list-header">
-              <h2 style={{ fontSize: '1.25rem', fontWeight: 600 }}>Riwayat Keuangan</h2>
-              <div className="filter-tabs">
-                <button className={`btn-filter ${filter === 'all' ? 'active' : ''}`} onClick={() => setFilter('all')}>Semua</button>
-                <button className={`btn-filter ${filter === 'income' ? 'active' : ''}`} onClick={() => setFilter('income')}>Masuk</button>
-                <button className={`btn-filter ${filter === 'expense' ? 'active' : ''}`} onClick={() => setFilter('expense')}>Keluar</button>
-                <button className={`btn-filter ${filter === 'saving' ? 'active' : ''}`} onClick={() => setFilter('saving')}>Tabungan</button>
+  if (!session) {
+    return <Auth />;
+  }
+
+  return (
+    <div className="app-wrapper">
+      {/* Sidebar Navigation */}
+      <aside className="sidebar">
+        <div className="sidebar-brand">
+          <h1>Money <span>Management</span></h1>
+        </div>
+
+        <nav className="sidebar-menu">
+          <button 
+            className={`sidebar-item ${activeTab === 'dashboard' ? 'active' : ''}`}
+            onClick={() => setActiveTab('dashboard')}
+          >
+            <LayoutDashboard size={18} />
+            <span>Dashboard</span>
+          </button>
+
+          <button 
+            className={`sidebar-item ${activeTab === 'transactions' ? 'active' : ''}`}
+            onClick={() => setActiveTab('transactions')}
+          >
+            <History size={18} />
+            <span>Transaksi</span>
+          </button>
+
+          <button 
+            className={`sidebar-item ${activeTab === 'savings' ? 'active' : ''}`}
+            onClick={() => setActiveTab('savings')}
+          >
+            <PiggyBank size={18} />
+            <span>Tabungan</span>
+          </button>
+
+          <button 
+            className={`sidebar-item ${activeTab === 'installments' ? 'active' : ''}`}
+            onClick={() => setActiveTab('installments')}
+          >
+            <CreditCard size={18} />
+            <span>Cicilan</span>
+          </button>
+        </nav>
+
+        <div className="sidebar-footer">
+          <button 
+            onClick={resetData}
+            className="sidebar-item"
+            style={{ color: 'var(--expense-color)', marginBottom: '0.5rem' }}
+          >
+            <RefreshCw size={18} />
+            <span>Reset Data</span>
+          </button>
+          <button 
+            onClick={handleLogout}
+            className="sidebar-item"
+          >
+            <LogOut size={18} />
+            <span>Keluar</span>
+          </button>
+        </div>
+      </aside>
+
+      {/* Main Content Area */}
+      <main className="main-content">
+        {/* Tab 1: Dashboard */}
+        {activeTab === 'dashboard' && (
+          <div>
+            {/* Summary Cards */}
+            <div className="dashboard-summary">
+              <div className="card summary-card">
+                <span className="summary-label">
+                  <Wallet size={16} style={{ marginRight: '0.25rem', verticalAlign: 'middle' }} />
+                  Saldo Utama
+                </span>
+                <span className="summary-value">{formatIDR(balance)}</span>
+              </div>
+              <div className="card summary-card">
+                <span className="summary-label">
+                  <ArrowUpCircle size={16} style={{ marginRight: '0.25rem', verticalAlign: 'middle', color: 'var(--income-color)' }} />
+                  Total Pemasukan
+                </span>
+                <span className="summary-value income">{formatIDR(totalIncome)}</span>
+              </div>
+              <div className="card summary-card">
+                <span className="summary-label">
+                  <ArrowDownCircle size={16} style={{ marginRight: '0.25rem', verticalAlign: 'middle', color: 'var(--expense-color)' }} />
+                  Total Pengeluaran
+                </span>
+                <span className="summary-value expense">{formatIDR(totalExpense)}</span>
+              </div>
+              <div className="card summary-card">
+                <span className="summary-label">
+                  <PiggyBank size={16} style={{ marginRight: '0.25rem', verticalAlign: 'middle', color: 'var(--saving-color)' }} />
+                  Tabungan
+                </span>
+                <span className="summary-value saving">{formatIDR(currentSaved)}</span>
               </div>
             </div>
 
-            <div className="list-items">
-              {filteredTransactions.length === 0 ? (
-                <div className="empty-state">Belum ada catatan keuangan.</div>
-              ) : (
-                filteredTransactions.map(tx => (
-                  <div key={tx.id} className="list-item">
-                    <div className="item-info">
-                      <span className="item-title">{tx.title}</span>
-                      <span className="item-meta">{tx.category} • {tx.date}</span>
+            <DashboardCharts transactions={transactions} />
+          </div>
+        )}
+
+        {/* Tab 2: Transactions */}
+        {activeTab === 'transactions' && (
+          <div className="main-grid" style={{ gridTemplateColumns: '1fr' }}>
+            <TransactionForm onAddTransaction={handleAddTransaction} />
+            
+            <div className="card">
+              <div className="list-header">
+                <h2 style={{ fontSize: '1.25rem', fontWeight: 600 }}>Riwayat Keuangan</h2>
+                <div className="filter-tabs">
+                  <button className={`btn-filter ${filter === 'all' ? 'active' : ''}`} onClick={() => setFilter('all')}>Semua</button>
+                  <button className={`btn-filter ${filter === 'income' ? 'active' : ''}`} onClick={() => setFilter('income')}>Masuk</button>
+                  <button className={`btn-filter ${filter === 'expense' ? 'active' : ''}`} onClick={() => setFilter('expense')}>Keluar</button>
+                  <button className={`btn-filter ${filter === 'saving' ? 'active' : ''}`} onClick={() => setFilter('saving')}>Tabungan</button>
+                </div>
+              </div>
+
+              <div className="list-items">
+                {filteredTransactions.length === 0 ? (
+                  <div className="empty-state">Belum ada catatan keuangan.</div>
+                ) : (
+                  filteredTransactions.map(tx => (
+                    <div key={tx.id} className="list-item">
+                      <div className="item-info">
+                        <span className="item-title">{tx.title}</span>
+                        <span className="item-meta">{tx.category} • {tx.date}</span>
+                      </div>
+                      <div className="item-amount-action">
+                        <span className={`item-amount ${
+                          tx.type === 'income' ? 'income' : 
+                          tx.type === 'expense' ? 'expense' : 
+                          tx.type === 'deposit' ? 'expense' : 'income'
+                        }`}>
+                          {tx.type === 'income' || tx.type === 'withdraw' ? '+' : '-'} {formatIDR(tx.amount)}
+                        </span>
+                        <button 
+                          onClick={() => handleDeleteTransaction(tx.id)}
+                          className="btn-delete"
+                          title="Hapus"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
                     </div>
-                    <div className="item-amount-action">
-                      <span className={`item-amount ${
-                        tx.type === 'income' ? 'income' : 
-                        tx.type === 'expense' ? 'expense' : 
-                        tx.type === 'deposit' ? 'expense' : 'income'
-                      }`}>
-                        {tx.type === 'income' || tx.type === 'withdraw' ? '+' : '-'} {formatIDR(tx.amount)}
-                      </span>
-                      <button 
-                        onClick={() => handleDeleteTransaction(tx.id)}
-                        className="btn-delete"
-                        title="Hapus"
-                      >
-                        <Trash2 size={16} />
-                      </button>
-                    </div>
-                  </div>
-                ))
-              )}
+                  ))
+                )}
+              </div>
             </div>
           </div>
-        </div>
+        )}
 
-        {/* Right Column */}
-        <div className="grid-column">
-          <SavingsTracker 
-            savings={savings} 
-            onUpdateSavings={handleUpdateSavings} 
-            balance={balance} 
-          />
-          <InstallmentTracker 
-            installments={installments}
-            onAddInstallment={handleAddInstallment}
-            onDeleteInstallment={handleDeleteInstallment}
-            onPayInstallment={handlePayInstallment}
-            balance={balance}
-          />
-          <DashboardCharts transactions={transactions} />
-        </div>
-      </div>
+        {/* Tab 3: Savings */}
+        {activeTab === 'savings' && (
+          <div style={{ maxWidth: '600px', margin: '0 auto' }}>
+            <SavingsTracker 
+              savings={savings} 
+              onUpdateSavings={handleUpdateSavings} 
+              balance={balance} 
+            />
+          </div>
+        )}
+
+        {/* Tab 4: Installments */}
+        {activeTab === 'installments' && (
+          <div style={{ maxWidth: '600px', margin: '0 auto' }}>
+            <InstallmentTracker 
+              installments={installments}
+              onAddInstallment={handleAddInstallment}
+              onDeleteInstallment={handleDeleteInstallment}
+              onPayInstallment={handlePayInstallment}
+              balance={balance}
+            />
+          </div>
+        )}
+      </main>
     </div>
   );
 }
