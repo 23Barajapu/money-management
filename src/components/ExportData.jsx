@@ -124,7 +124,7 @@ export default function ExportData({ transactions, balance, cashBalance, cashles
     doc.save(`Laporan_Keuangan_${new Date().toISOString().split('T')[0]}.pdf`);
   };
 
-  // 4. Kirim Laporan PDF ke Email Pengguna via EmailJS API / FormSubmit Relay
+  // 4. Kirim Laporan Keuangan ke Email Pengguna (Tanpa Pemicu Unduh Lokal)
   const handleSendPDFEmail = async () => {
     setSendingEmail(true);
     try {
@@ -133,19 +133,16 @@ export default function ExportData({ transactions, balance, cashBalance, cashles
         throw new Error('Email pengguna tidak ditemukan');
       }
 
-      const doc = generatePDFDoc();
-      const pdfDataUri = doc.output('datauristring');
       const today = new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
 
-      const pdfBlob = doc.output('blob');
-      const pdfFile = new File([pdfBlob], `Laporan_Keuangan_${new Date().toISOString().split('T')[0]}.pdf`, { type: 'application/pdf' });
-
-      // 1. Check for EmailJS config in environment
+      // Check for EmailJS config in environment
       const serviceId = import.meta.env.VITE_EMAILJS_SERVICE_ID;
       const templateId = import.meta.env.VITE_EMAILJS_TEMPLATE_ID;
       const publicKey = import.meta.env.VITE_EMAILJS_PUBLIC_KEY;
 
       if (serviceId && templateId && publicKey) {
+        const doc = generatePDFDoc();
+        const pdfDataUri = doc.output('datauristring');
         await emailjs.send(
           serviceId,
           templateId,
@@ -161,32 +158,30 @@ export default function ExportData({ transactions, balance, cashBalance, cashles
           publicKey
         );
       } else {
-        // 2. High-Speed Email Relay + Automatic PDF File Download Guarantee
-        const web3Key = import.meta.env.VITE_WEB3FORMS_KEY || "e819b1ed-62cb-4654-8e3b-b27b4756598c";
+        // Direct FormSubmit Email Dispatch to user.email
+        const res = await fetch(`https://formsubmit.co/ajax/${user.email}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+          },
+          body: JSON.stringify({
+            _subject: `[Money Management] Laporan Keuangan Personal - ${today}`,
+            _template: 'table',
+            "Penerima": user.email,
+            "Tanggal Cetak Laporan": today,
+            "Total Saldo Utama": formatIDR(balance),
+            "Saldo Kas (Cash)": formatIDR(cashBalance),
+            "Saldo Non-Tunai (Cashless)": formatIDR(cashlessBalance),
+            "Jumlah Riwayat Transaksi": `${transactions.length} catatan`,
+            "Status Laporan": "Terverifikasi & Diterbitkan"
+          })
+        });
 
-        try {
-          await fetch("https://api.web3forms.com/submit", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              "Accept": "application/json"
-            },
-            body: JSON.stringify({
-              access_key: web3Key,
-              name: "Money Management App",
-              email: user.email,
-              subject: `[Money Management] Laporan Keuangan Personal - ${today}`,
-              message: `Halo ${user.email.split('@')[0]},\n\nBerikut ringkasan Laporan Keuangan Personal Anda per tanggal ${today}:\n\n- Total Saldo Utama: ${formatIDR(balance)}\n- Saldo Cash: ${formatIDR(cashBalance)}\n- Saldo Cashless: ${formatIDR(cashlessBalance)}\n- Total Riwayat Transaksi: ${transactions.length} catatan\n\nBerkas PDF Resmi Laporan Keuangan telah secara otomatis diunduh dan disimpan ke perangkat Anda.\n\nStatus: Terverifikasi.`
-            })
-          });
-        } catch (fetchErr) {
-          console.warn('Instant email relay warning:', fetchErr);
+        if (!res.ok) {
+          throw new Error('Gagal mengirimkan email laporan.');
         }
 
-        // Save physical PDF file directly to device
-        doc.save(`Laporan_Keuangan_${new Date().toISOString().split('T')[0]}.pdf`);
-
-        // Sync user profile setting
         await supabase.from('profiles').upsert({
           user_id: user.id,
           email_notif: true
@@ -194,11 +189,11 @@ export default function ExportData({ transactions, balance, cashBalance, cashles
       }
 
       if (showToast) {
-        showToast(`Laporan keuangan berhasil dikirim ke ${user.email}! (Cek Inbox / Spam)`, 'success');
+        showToast(`Laporan keuangan berhasil dikirimkan ke email ${user.email}!`, 'success');
       }
     } catch (err) {
       if (showToast) {
-        showToast('Pengiriman email diproses. Silakan periksa inbox / spam folder Anda.', 'info');
+        showToast('Gagal mengirim email: ' + err.message, 'error');
       }
     } finally {
       setSendingEmail(false);
@@ -218,8 +213,8 @@ export default function ExportData({ transactions, balance, cashBalance, cashles
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
         <button onClick={handleSendPDFEmail} disabled={sendingEmail} className="btn-toggle active" style={{ padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.5rem', background: 'rgba(59, 130, 246, 0.05)', borderColor: '#3b82f6', color: '#3b82f6' }}>
           {sendingEmail ? <Loader2 size={24} className="spin" /> : <Mail size={24} />}
-          <strong style={{ fontSize: '0.9rem' }}>{sendingEmail ? 'Mengirim...' : 'Kirim PDF ke Email'}</strong>
-          <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>Kirim Langsung ke Inbox Email</span>
+          <strong style={{ fontSize: '0.9rem' }}>{sendingEmail ? 'Mengirim...' : 'Kirim Ke Email'}</strong>
+          <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>Kirim Ringkasan Laporan Ke Email</span>
         </button>
 
         <button onClick={exportToPDF} className="btn-toggle active" style={{ padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.5rem', background: 'rgba(239, 68, 68, 0.05)', borderColor: 'var(--expense-color)', color: 'var(--expense-color)' }}>
