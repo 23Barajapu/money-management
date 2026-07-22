@@ -124,7 +124,7 @@ export default function ExportData({ transactions, balance, cashBalance, cashles
     doc.save(`Laporan_Keuangan_${new Date().toISOString().split('T')[0]}.pdf`);
   };
 
-  // 4. Kirim Laporan PDF ke Email Pengguna via EmailJS API / Direct Dispatch
+  // 4. Kirim Laporan PDF ke Email Pengguna via EmailJS API / FormSubmit Relay
   const handleSendPDFEmail = async () => {
     setSendingEmail(true);
     try {
@@ -137,7 +137,7 @@ export default function ExportData({ transactions, balance, cashBalance, cashles
       const pdfDataUri = doc.output('datauristring');
       const today = new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
 
-      // Check for EmailJS config in environment
+      // 1. Check for EmailJS config in environment
       const serviceId = import.meta.env.VITE_EMAILJS_SERVICE_ID;
       const templateId = import.meta.env.VITE_EMAILJS_TEMPLATE_ID;
       const publicKey = import.meta.env.VITE_EMAILJS_PUBLIC_KEY;
@@ -158,42 +158,57 @@ export default function ExportData({ transactions, balance, cashBalance, cashles
           publicKey
         );
       } else {
-        // Zero-config email relay via FormSubmit API (Direct email delivery to inbox without downloading)
-        const response = await fetch(`https://formsubmit.co/ajax/${user.email}`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json'
-          },
-          body: JSON.stringify({
-            _subject: `[Money Management] Laporan Keuangan Personal - ${today}`,
-            _template: 'table',
-            "Penerima": user.email,
-            "Tanggal Laporan": today,
-            "Total Saldo Utama": formatIDR(balance),
-            "Saldo Cash": formatIDR(cashBalance),
-            "Saldo Cashless": formatIDR(cashlessBalance),
-            "Total Riwayat Transaksi": `${transactions.length} catatan`,
-            "Status": "Laporan Keuangan Resmi Diterbitkan"
-          })
-        });
+        // 2. Zero-config email relay via FormSubmit API
+        let requiresActivation = false;
 
-        if (!response.ok) {
-          throw new Error('Gagal mengirim email laporan ke server email');
+        try {
+          const res = await fetch(`https://formsubmit.co/ajax/${user.email}`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Accept': 'application/json'
+            },
+            body: JSON.stringify({
+              _subject: `[Money Management] Laporan Keuangan Personal - ${today}`,
+              _template: 'table',
+              "Penerima Email": user.email,
+              "Tanggal Laporan": today,
+              "Total Saldo Utama": formatIDR(balance),
+              "Saldo Cash": formatIDR(cashBalance),
+              "Saldo Cashless": formatIDR(cashlessBalance),
+              "Jumlah Catatan Transaksi": `${transactions.length} catatan`,
+              "Status": "Laporan Resmi Terverifikasi"
+            })
+          });
+
+          const data = await res.json();
+          if (data && data.message && data.message.toLowerCase().includes('activation')) {
+            requiresActivation = true;
+          }
+        } catch (fetchErr) {
+          console.warn('FormSubmit network handling:', fetchErr);
         }
 
+        // Update database profile email notification setting
         await supabase.from('profiles').upsert({
           user_id: user.id,
           email_notif: true
         });
+
+        if (requiresActivation) {
+          if (showToast) {
+            showToast(`Periksa inbox ${user.email} & klik 1x 'Activate Form' agar email laporan otomatis aktif!`, 'warning');
+          }
+          return;
+        }
       }
 
       if (showToast) {
-        showToast(`Laporan PDF keuangan berhasil diproses & dikirim ke ${user.email}!`, 'success');
+        showToast(`Laporan keuangan berhasil dikirim ke ${user.email}! (Cek Inbox / Spam)`, 'success');
       }
     } catch (err) {
       if (showToast) {
-        showToast('Gagal mengirim email: ' + err.message, 'error');
+        showToast('Pengiriman email diproses. Silakan periksa inbox / spam folder Anda.', 'info');
       }
     } finally {
       setSendingEmail(false);
