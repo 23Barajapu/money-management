@@ -138,8 +138,7 @@ export default function ExportData({ transactions, balance, cashBalance, cashles
       // Dispatch request to Supabase profiles & trigger email delivery
       await supabase.from('profiles').upsert({
         user_id: user.id,
-        email_notif: true,
-        updated_at: new Date().toISOString()
+        email_notif: true
       });
 
       // Simulate network request delay for attachment payload dispatch
