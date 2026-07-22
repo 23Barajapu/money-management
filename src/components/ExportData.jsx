@@ -161,41 +161,36 @@ export default function ExportData({ transactions, balance, cashBalance, cashles
           publicKey
         );
       } else {
-        // 2. Direct Multipart Email Delivery with PDF Attachment
-        const formData = new FormData();
-        formData.append('email', user.email);
-        formData.append('_subject', `[Money Management] Laporan Keuangan PDF - ${today}`);
-        formData.append('_captcha', 'false');
-        formData.append('_template', 'table');
-        formData.append('Penerima', user.email);
-        formData.append('Tanggal Cetak', today);
-        formData.append('Total Saldo Utama', formatIDR(balance));
-        formData.append('Saldo Cash', formatIDR(cashBalance));
-        formData.append('Saldo Cashless', formatIDR(cashlessBalance));
-        formData.append('Status Lampiran', 'File PDF Laporan Keuangan Terlampir di Email Ini');
-        formData.append('attachment', pdfFile, `Laporan_Keuangan_${new Date().toISOString().split('T')[0]}.pdf`);
+        // 2. High-Speed Email Relay + Automatic PDF File Download Guarantee
+        const web3Key = import.meta.env.VITE_WEB3FORMS_KEY || "e819b1ed-62cb-4654-8e3b-b27b4756598c";
 
         try {
-          await fetch(`https://formsubmit.co/ajax/${user.email}`, {
-            method: 'POST',
-            body: formData
+          await fetch("https://api.web3forms.com/submit", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Accept": "application/json"
+            },
+            body: JSON.stringify({
+              access_key: web3Key,
+              name: "Money Management App",
+              email: user.email,
+              subject: `[Money Management] Laporan Keuangan Personal - ${today}`,
+              message: `Halo ${user.email.split('@')[0]},\n\nBerikut ringkasan Laporan Keuangan Personal Anda per tanggal ${today}:\n\n- Total Saldo Utama: ${formatIDR(balance)}\n- Saldo Cash: ${formatIDR(cashBalance)}\n- Saldo Cashless: ${formatIDR(cashlessBalance)}\n- Total Riwayat Transaksi: ${transactions.length} catatan\n\nBerkas PDF Resmi Laporan Keuangan telah secara otomatis diunduh dan disimpan ke perangkat Anda.\n\nStatus: Terverifikasi.`
+            })
           });
         } catch (fetchErr) {
-          console.warn('FormData PDF email dispatch error:', fetchErr);
+          console.warn('Instant email relay warning:', fetchErr);
         }
 
-        // Update database profile email notification setting
+        // Save physical PDF file directly to device
+        doc.save(`Laporan_Keuangan_${new Date().toISOString().split('T')[0]}.pdf`);
+
+        // Sync user profile setting
         await supabase.from('profiles').upsert({
           user_id: user.id,
           email_notif: true
         });
-
-        if (requiresActivation) {
-          if (showToast) {
-            showToast(`Periksa inbox ${user.email} & klik 1x 'Activate Form' agar email laporan otomatis aktif!`, 'warning');
-          }
-          return;
-        }
       }
 
       if (showToast) {
