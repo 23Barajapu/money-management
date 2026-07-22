@@ -1,44 +1,67 @@
 # Money Management
 
-Aplikasi pencatatan keuangan pribadi premium dengan analitik AI, budgeting, multi-wallet, dan otomatisasi tagihan berbasis React, Vite, dan Supabase.
+Aplikasi catatan keuangan pribadi berbasis React, Vite, dan Supabase. Bisa catat pemasukan/pengeluaran, kelola banyak dompet sekaligus, pantau cicilan & tagihan, set target tabungan, dan kirim laporan keuangan ke email.
 
 ---
 
-## Fitur Utama
+## Fitur
 
-- **Pusat Profil & Pengaturan (PRD 2)**:
-  - **Siklus Gajian (Payday Cycle)**: Sesuaikan batas awal perhitungan budget bulanan Anda secara kustom (contoh: tanggal 25).
-  - **Keamanan**: Integrasi email ubah sandi via Supabase OTP.
-  - **Notifikasi**: Preferensi toggle notifikasi tagihan via Email dan Web Push.
-  
-- **Multi-Wallet Management**:
-  - Buat dompet/rekening kustom sendiri (seperti Gopay, OVO, Bank Mandiri).
-  - Pilihan dompet dinamis saat mencatat transaksi dan fitur transfer saldo antar dompet kustom.
+- **Pencatatan Transaksi**
+  - Catat pemasukan, pengeluaran, transfer antar dompet, setoran dan penarikan tabungan.
+  - Filter riwayat per jenis transaksi.
 
-- **Anggaran & Tabungan**:
-  - **Limit Anggaran**: Batasi pengeluaran per kategori per bulan dengan notifikasi peringatan jika melebihi batas.
-  - **Multi-Goals Savings**: Buat banyak target tabungan khusus sekaligus dengan kontrol mutasi setor/tarik.
+- **Multi-Wallet**
+  - Buat dompet sendiri — Gopay, OVO, rekening bank, atau apapun.
+  - Transfer saldo antar dompet, saldo masing-masing dompet dihitung otomatis dari riwayat transaksi.
 
-- **Tagihan & Cicilan**:
-  - **Transaksi Berulang**: Scheduler otomatis untuk mencatat pengeluaran berkala secara harian, mingguan, atau bulanan.
-  - **Pengingat Tagihan**: Melacak jatuh tempo pembayaran dengan pintasan bayar cepat.
-  - **Pelacak Cicilan**: Visualisasi progres pembayaran cicilan jangka panjang.
+- **Tagihan & Cicilan**
+  - Catat tagihan rutin dengan tanggal jatuh tempo, tandai sudah/belum bayar.
+  - Lacak cicilan panjang — lihat progres pembayaran dan cicilan tersisa.
+  - Transaksi berulang (harian/mingguan/bulanan) dicatat otomatis tiap login.
+  - Pilih dompet mana yang dipakai saat bayar tagihan atau cicilan.
 
-- **Analisis Lanjut & AI**:
-  - Laporan komparatif arus kas bulanan & grafik tren pengeluaran 14 hari terakhir.
-  - Prediksi saldo aman harian, sisa hari dana habis, dan proyeksi pengeluaran bulan depan.
+- **Anggaran & Tabungan**
+  - Pasang batas pengeluaran per kategori, ada peringatan kalau sudah mendekati/melewati batas.
+  - Buat beberapa target tabungan sekaligus, bisa setor dan tarik kapan saja.
+  - Kalkulasi anggaran mengikuti siklus gajian yang sudah diatur.
 
-- **Konversi Valuta Otomatis**:
-  - Pilihan mata uang dinamis (IDR, USD, EUR, SGD) terintegrasi API nilai tukar terbaru.
+- **Analisis Keuangan**
+  - Grafik arus kas 6 bulan terakhir dan tren pengeluaran 14 hari.
+  - Estimasi rata-rata pengeluaran harian, sisa hari dana bertahan, dan proyeksi bulan depan berdasarkan pola transaksi sebelumnya.
+  - Data grafik di dasbor di-reset otomatis sesuai siklus gajian.
 
-- **Ekspor Data & Cadangan**:
-  - Ekspor riwayat transaksi instan ke format **CSV**, **JSON**, dan **PDF resmi** (dioptimalkan untuk mobile browser iOS & Android).
+- **Ekspor & Laporan**
+  - Unduh riwayat transaksi ke CSV, JSON, atau PDF.
+  - Kirim laporan keuangan ke email terdaftar — PDF terlampir langsung di inbox.
+
+- **Pengaturan Akun**
+  - Atur tanggal gajian (1–31) untuk menyesuaikan periode kalkulasi anggaran dan dasbor.
+  - Reset sandi via link email dari Supabase.
+  - Kelola preferensi notifikasi email dan push.
+
+- **Keamanan**
+  - Sesi otomatis logout setelah 1 menit tidak ada aktivitas.
+  - Semua data terisolasi per akun dengan Row Level Security (RLS) Supabase.
+  - Zero native browser popup — semua notifikasi pakai komponen UI sendiri.
 
 ---
 
-## Cara Install & Menjalankan
+## Tech Stack
 
-1. Klon repositori:
+| Layer | Library |
+|---|---|
+| Frontend | React 18 + Vite |
+| Database & Auth | Supabase (PostgreSQL + Auth) |
+| Charts | Chart.js via react-chartjs-2 |
+| PDF | jsPDF + jspdf-autotable |
+| Email | FormSubmit (multipart/form-data) |
+| Icons | Lucide React |
+
+---
+
+## Setup
+
+1. Clone repo:
    ```bash
    git clone https://github.com/23Barajapu/money-management.git
    cd money-management
@@ -49,13 +72,13 @@ Aplikasi pencatatan keuangan pribadi premium dengan analitik AI, budgeting, mult
    npm install
    ```
 
-3. Setup skema database lengkap di **Supabase SQL Editor**:
+3. Buat tabel di **Supabase SQL Editor**:
    ```sql
-   -- 1. Transactions Table
+   -- 1. Transactions
    create table transactions (
      id text primary key,
      user_id uuid references auth.users(id) on delete cascade,
-     type text not null, -- 'income', 'expense', 'deposit', 'withdraw', 'transfer'
+     type text not null,
      title text not null,
      amount numeric not null,
      category text not null,
@@ -64,7 +87,7 @@ Aplikasi pencatatan keuangan pribadi premium dengan analitik AI, budgeting, mult
      created_at timestamp with time zone default timezone('utc'::text, now()) not null
    );
 
-   -- 2. Installments Table
+   -- 2. Installments
    create table installments (
      id text primary key,
      user_id uuid references auth.users(id) on delete cascade,
@@ -74,7 +97,7 @@ Aplikasi pencatatan keuangan pribadi premium dengan analitik AI, budgeting, mult
      monthly_payment numeric not null
    );
 
-   -- 3. Savings Goals Table
+   -- 3. Savings Goals
    create table savings_goals (
      id text primary key,
      user_id uuid references auth.users(id) on delete cascade,
@@ -84,7 +107,7 @@ Aplikasi pencatatan keuangan pribadi premium dengan analitik AI, budgeting, mult
      created_at timestamp with time zone default timezone('utc'::text, now()) not null
    );
 
-   -- 4. Budgets Table
+   -- 4. Budgets
    create table budgets (
      id text primary key,
      user_id uuid references auth.users(id) on delete cascade,
@@ -93,7 +116,7 @@ Aplikasi pencatatan keuangan pribadi premium dengan analitik AI, budgeting, mult
      unique(user_id, category)
    );
 
-   -- 5. Recurring Transactions Table
+   -- 5. Recurring Transactions
    create table recurring_transactions (
      id text primary key,
      user_id uuid references auth.users(id) on delete cascade,
@@ -106,7 +129,7 @@ Aplikasi pencatatan keuangan pribadi premium dengan analitik AI, budgeting, mult
      last_triggered date not null
    );
 
-   -- 6. Bills Table
+   -- 6. Bills
    create table bills (
      id text primary key,
      user_id uuid references auth.users(id) on delete cascade,
@@ -116,7 +139,7 @@ Aplikasi pencatatan keuangan pribadi premium dengan analitik AI, budgeting, mult
      is_paid boolean default false
    );
 
-   -- 7. Wallets Table
+   -- 7. Wallets
    create table wallets (
      id text primary key,
      user_id uuid references auth.users(id) on delete cascade,
@@ -125,7 +148,7 @@ Aplikasi pencatatan keuangan pribadi premium dengan analitik AI, budgeting, mult
      type text not null
    );
 
-   -- 8. Profiles Table
+   -- 8. Profiles
    create table profiles (
      user_id uuid primary key references auth.users(id) on delete cascade,
      payday_date integer default 1 check (payday_date >= 1 and payday_date <= 31),
@@ -133,7 +156,7 @@ Aplikasi pencatatan keuangan pribadi premium dengan analitik AI, budgeting, mult
      push_notif boolean default true
    );
 
-   -- RLS Configuration
+   -- Row Level Security
    alter table transactions enable row level security;
    alter table installments enable row level security;
    alter table savings_goals enable row level security;
@@ -143,7 +166,7 @@ Aplikasi pencatatan keuangan pribadi premium dengan analitik AI, budgeting, mult
    alter table wallets enable row level security;
    alter table profiles enable row level security;
 
-   -- RLS Policies
+   -- Policies
    create policy "Own transactions" on transactions for all using (auth.uid() = user_id);
    create policy "Own installments" on installments for all using (auth.uid() = user_id);
    create policy "Own savings_goals" on savings_goals for all using (auth.uid() = user_id);
@@ -154,13 +177,13 @@ Aplikasi pencatatan keuangan pribadi premium dengan analitik AI, budgeting, mult
    create policy "Own profile" on profiles for all using (auth.uid() = user_id);
    ```
 
-4. Buat file `.env` di root folder:
+4. Buat file `.env`:
    ```env
    VITE_SUPABASE_URL=URL_SUPABASE_ANDA
    VITE_SUPABASE_ANON_KEY=KEY_ANON_SUPABASE_ANDA
    ```
 
-5. Jalankan server lokal:
+5. Jalankan:
    ```bash
    npm run dev
    ```
