@@ -1,14 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { PlusCircle, ArrowDownCircle, ArrowUpCircle, RefreshCw } from 'lucide-react';
+import { useCurrencyInput } from '../hooks/useCurrencyInput';
 
-export default function TransactionForm({ onAddTransaction, wallets = [] }) {
+export default function TransactionForm({ onAddTransaction, wallets = [], currency = 'IDR' }) {
   const [type, setType] = useState('income'); // 'income', 'expense', or 'transfer'
   const [title, setTitle] = useState('');
-  const [amount, setAmount] = useState('');
   const [category, setCategory] = useState('');
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [paymentMethod, setPaymentMethod] = useState('');
   const [destinationWalletId, setDestinationWalletId] = useState('');
+
+  const { displayValue, rawValue, handleChange: handleAmountChange, handleBlur: handleAmountBlur, reset: resetAmount } = useCurrencyInput(currency);
 
   // Fallback if wallets are not fetched yet
   const activeWallets = wallets.length > 0 ? wallets : [
@@ -29,22 +31,24 @@ export default function TransactionForm({ onAddTransaction, wallets = [] }) {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (!title || !amount || (type !== 'transfer' && !category)) return;
+    if (!title || !rawValue || (type !== 'transfer' && !category)) return;
 
     onAddTransaction({
       id: Date.now().toString(),
       type,
       title: type === 'transfer' ? (title || 'Transfer Saldo') : title,
-      amount: parseFloat(amount),
+      amount: parseFloat(rawValue),
       category: type === 'transfer' ? destinationWalletId : category,
       date,
       payment_method: paymentMethod,
     });
 
     setTitle('');
-    setAmount('');
+    resetAmount();
     setCategory('');
   };
+
+  const currencyLabel = currency === 'IDR' ? 'Rp' : currency;
 
   const categories = {
     income: ['Gaji', 'Bonus', 'Investasi', 'Lain-lain'],
@@ -94,15 +98,31 @@ export default function TransactionForm({ onAddTransaction, wallets = [] }) {
         </div>
 
         <div className="form-group">
-          <label>Nominal (Rp)</label>
-          <input
-            type="number"
-            placeholder="e.g. 50000"
-            value={amount}
-            onChange={(e) => setAmount(e.target.value)}
-            required
-            min="1"
-          />
+          <label>Nominal ({currencyLabel})</label>
+          <div style={{ position: 'relative' }}>
+            <span style={{
+              position: 'absolute',
+              left: '0.75rem',
+              top: '50%',
+              transform: 'translateY(-50%)',
+              color: 'var(--text-secondary)',
+              fontSize: '0.875rem',
+              pointerEvents: 'none',
+              userSelect: 'none'
+            }}>
+              {currencyLabel}
+            </span>
+            <input
+              type="text"
+              inputMode="numeric"
+              placeholder={currency === 'IDR' ? '0' : '0.00'}
+              value={displayValue}
+              onChange={handleAmountChange}
+              onBlur={handleAmountBlur}
+              required
+              style={{ paddingLeft: currency.length <= 3 ? '2.5rem' : '3.5rem' }}
+            />
+          </div>
         </div>
 
         {type !== 'transfer' && (

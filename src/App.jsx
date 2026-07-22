@@ -661,6 +661,7 @@ export default function App() {
                 formatIDR={formatIDR} 
                 showToast={showToast}
                 showConfirm={showConfirm}
+                currency={currency}
               />
             </div>
           </div>
@@ -669,7 +670,7 @@ export default function App() {
         {/* Tab 2: Transactions */}
         {activeTab === 'transactions' && (
           <div className="main-grid" style={{ gridTemplateColumns: '1fr' }}>
-            <TransactionForm onAddTransaction={handleAddTransaction} wallets={walletsWithUpdatedBalances} />
+            <TransactionForm onAddTransaction={handleAddTransaction} wallets={walletsWithUpdatedBalances} currency={currency} />
             
             <div className="card">
               <div className="list-header">

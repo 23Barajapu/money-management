@@ -1,35 +1,37 @@
 import React, { useState } from 'react';
 import { supabase } from '../supabaseClient';
 import { Wallet, Plus, Trash2, ArrowUpRight, ArrowDownLeft } from 'lucide-react';
+import { useCurrencyInput } from '../hooks/useCurrencyInput';
 
-export default function WalletManager({ wallets, fetchUserData, formatIDR, showToast, showConfirm }) {
+export default function WalletManager({ wallets, fetchUserData, formatIDR, showToast, showConfirm, currency = 'IDR' }) {
   const [name, setName] = useState('');
   const [type, setType] = useState('cash');
-  const [balance, setBalance] = useState('');
   const [loading, setLoading] = useState(false);
+
+  const { displayValue: balanceDisplay, rawValue: balanceRaw, handleChange: handleBalanceChange, handleBlur: handleBalanceBlur, reset: resetBalance } = useCurrencyInput(currency);
 
   const handleAddWallet = async (e) => {
     e.preventDefault();
-    if (!name || !balance) return;
+    if (!name || !balanceRaw) return;
 
     setLoading(true);
     try {
       const user = (await supabase.auth.getUser()).data.user;
       if (!user) return;
 
-      const newWallet = {
+    const newWallet = {
         id: Date.now().toString(),
         user_id: user.id,
         name,
         type,
-        balance: parseFloat(balance)
+        balance: parseFloat(balanceRaw)
       };
 
       const { error } = await supabase.from('wallets').insert(newWallet);
       if (error) throw error;
 
       setName('');
-      setBalance('');
+      resetBalance();
       if (showToast) showToast('Dompet baru berhasil ditambahkan!', 'success');
       await fetchUserData(); // Refresh wallets in parent state
     } catch (error) {
@@ -97,10 +99,12 @@ export default function WalletManager({ wallets, fetchUserData, formatIDR, showT
         <div className="form-group" style={{ marginBottom: 0 }}>
           <label>Saldo Awal</label>
           <input 
-            type="number" 
-            placeholder="e.g. 500000" 
-            value={balance} 
-            onChange={(e) => setBalance(e.target.value)} 
+            type="text"
+            inputMode="numeric"
+            placeholder="0" 
+            value={balanceDisplay} 
+            onChange={handleBalanceChange}
+            onBlur={handleBalanceBlur}
             required 
           />
         </div>
