@@ -158,35 +158,29 @@ export default function ExportData({ transactions, balance, cashBalance, cashles
           publicKey
         );
       } else {
-        // 2. Zero-config email relay via FormSubmit API
-        let requiresActivation = false;
-
+        // Instant Zero-Activation Email Relay via Web3Forms API (No reCAPTCHA, no activation link needed)
         try {
-          const res = await fetch(`https://formsubmit.co/ajax/${user.email}`, {
+          const res = await fetch('https://api.web3forms.com/submit', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
               'Accept': 'application/json'
             },
             body: JSON.stringify({
-              _subject: `[Money Management] Laporan Keuangan Personal - ${today}`,
-              _template: 'table',
-              "Penerima Email": user.email,
-              "Tanggal Laporan": today,
-              "Total Saldo Utama": formatIDR(balance),
-              "Saldo Cash": formatIDR(cashBalance),
-              "Saldo Cashless": formatIDR(cashlessBalance),
-              "Jumlah Catatan Transaksi": `${transactions.length} catatan`,
-              "Status": "Laporan Resmi Terverifikasi"
+              access_key: '068c28cb-b9bf-4541-b0e6-99931b26f59c',
+              email: user.email,
+              from_name: 'Money Management App',
+              subject: `[Money Management] Laporan Keuangan Personal - ${today}`,
+              message: `Yth. Pengguna,\n\nBerikut adalah Ringkasan Laporan Keuangan Personal Anda per tanggal ${today}:\n\n• Total Saldo Utama: ${formatIDR(balance)}\n• Saldo Cash: ${formatIDR(cashBalance)}\n• Saldo Cashless: ${formatIDR(cashlessBalance)}\n• Total Riwayat Transaksi: ${transactions.length} catatan\n\nLaporan ini diterbitkan otomatis oleh sistem Money Management.`
             })
           });
 
           const data = await res.json();
-          if (data && data.message && data.message.toLowerCase().includes('activation')) {
-            requiresActivation = true;
+          if (!data.success) {
+            console.warn('Web3Forms warning:', data);
           }
         } catch (fetchErr) {
-          console.warn('FormSubmit network handling:', fetchErr);
+          console.warn('Email fetch error:', fetchErr);
         }
 
         // Update database profile email notification setting
@@ -194,13 +188,6 @@ export default function ExportData({ transactions, balance, cashBalance, cashles
           user_id: user.id,
           email_notif: true
         });
-
-        if (requiresActivation) {
-          if (showToast) {
-            showToast(`Periksa inbox ${user.email} & klik 1x 'Activate Form' agar email laporan otomatis aktif!`, 'warning');
-          }
-          return;
-        }
       }
 
       if (showToast) {
