@@ -504,6 +504,10 @@ input:focus, select:focus, textarea:focus {
 
 /* Mobile Responsiveness */
 @media (max-width: 768px) {
+  .app-wrapper {
+    display: block;
+  }
+
   .card {
     padding: 1rem;
   }
