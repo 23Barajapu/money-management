@@ -498,7 +498,7 @@ export default function App() {
             onClick={() => setActiveTab('savings')}
           >
             <PiggyBank size={18} />
-            <span>Anggaran</span>
+            <span>Anggaran & Tabungan</span>
           </button>
 
           <button 
@@ -506,7 +506,7 @@ export default function App() {
             onClick={() => setActiveTab('reminders')}
           >
             <Calendar size={18} />
-            <span>Tagihan</span>
+            <span>Tagihan & Cicilan</span>
           </button>
 
           <button 
@@ -514,7 +514,7 @@ export default function App() {
             onClick={() => setActiveTab('analytics')}
           >
             <TrendingUp size={18} />
-            <span>Analisis</span>
+            <span>Analisis & Ekspor</span>
           </button>
         </nav>
 

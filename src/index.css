@@ -562,13 +562,12 @@ input:focus, select:focus, textarea:focus {
 
   .sidebar-item span {
     display: block;
-    font-size: 0.58rem;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    font-size: 0.55rem;
+    white-space: normal;
+    word-break: break-word;
     max-width: 100%;
     text-align: center;
-    line-height: 1.2;
+    line-height: 1.1;
   }
 
   .sidebar-item.active {
