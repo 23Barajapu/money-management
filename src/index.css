@@ -627,7 +627,7 @@ input:focus, select:focus, textarea:focus {
   .main-content {
     margin-left: 0;
     width: 100%;
-    padding: calc(60px + 1.5rem) 1rem calc(65px + 1.5rem) 1rem;
+    padding: calc(60px + 2.5rem) 1rem calc(60px + 4.5rem + env(safe-area-inset-bottom)) 1rem;
   }
 }
 
