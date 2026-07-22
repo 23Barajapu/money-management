@@ -39,6 +39,7 @@ export default function App() {
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [profile, setProfile] = useState({ payday_date: 1, email_notif: true, push_notif: true });
   const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [logoutMessage, setLogoutMessage] = useState('');
 
   useEffect(() => {
     fetch('https://open.er-api.com/v6/latest/IDR')
@@ -61,6 +62,9 @@ export default function App() {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
       setLoading(false);
+      if (session) {
+        setLogoutMessage('');
+      }
     });
 
     return () => subscription.unsubscribe();
@@ -352,8 +356,8 @@ export default function App() {
     const resetTimer = () => {
       if (timeoutId) clearTimeout(timeoutId);
       timeoutId = setTimeout(() => {
+        setLogoutMessage('Sesi Anda telah berakhir karena tidak ada aktivitas selama 1 menit.');
         handleLogout();
-        alert('Sesi Anda telah berakhir karena tidak ada aktivitas selama 1 menit.');
       }, 60000);
     };
 
@@ -400,7 +404,7 @@ export default function App() {
   }
 
   if (!session) {
-    return <Auth />;
+    return <Auth initialMessage={logoutMessage} />;
   }
 
   return (

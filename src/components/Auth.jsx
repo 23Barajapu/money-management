@@ -2,14 +2,14 @@ import React, { useState } from 'react';
 import { supabase } from '../supabaseClient';
 import { Lock, Mail, Loader2, Eye, EyeOff } from 'lucide-react';
 
-export default function Auth() {
+export default function Auth({ initialMessage = '' }) {
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [mode, setMode] = useState('signin'); // 'signin', 'signup', 'signup_otp', 'forgot', 'reset_otp', 'new_password'
   const [otpToken, setOtpToken] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [message, setMessage] = useState({ text: '', type: '' });
+  const [message, setMessage] = useState(initialMessage ? { text: initialMessage, type: 'error' } : { text: '', type: '' });
 
   const handleGoogleLogin = async () => {
     setLoading(true);
