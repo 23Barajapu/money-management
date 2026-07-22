@@ -178,14 +178,11 @@ export default function ExportData({ transactions, balance, cashBalance, cashles
         // Lampiran PDF fisik — FormSubmit field 'attachment'
         formData.append('attachment', pdfFile, filename);
 
-        // FormData harus dikirim ke endpoint NON-ajax (bukan /ajax/) supaya attachment diteruskan
-        const res = await fetch(`https://formsubmit.co/${user.email}`, {
+        // Fire-and-forget — tidak perlu await response redirect dari FormSubmit
+        fetch(`https://formsubmit.co/${user.email}`, {
           method: 'POST',
           body: formData
-        });
-
-        // FormSubmit non-ajax redirect ke halaman terima kasih — tidak ada JSON response
-        // Selama tidak throw, dianggap berhasil
+        }).catch(() => {}); // Ignore redirect/network error silently
 
         await supabase.from('profiles').upsert({
           user_id: user.id,
