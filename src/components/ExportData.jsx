@@ -158,29 +158,34 @@ export default function ExportData({ transactions, balance, cashBalance, cashles
           publicKey
         );
       } else {
-        // Direct FormSubmit Email Dispatch to user.email
-        const res = await fetch(`https://formsubmit.co/ajax/${user.email}`, {
+        // FormSubmit multipart/form-data — satu-satunya cara kirim file attachment
+        const doc = generatePDFDoc();
+        const pdfBlob = doc.output('blob');
+        const filename = `Laporan_Keuangan_${new Date().toISOString().split('T')[0]}.pdf`;
+        const pdfFile = new File([pdfBlob], filename, { type: 'application/pdf' });
+
+        const formData = new FormData();
+        formData.append('_subject', `[Money Management] Laporan Keuangan PDF - ${today}`);
+        formData.append('_captcha', 'false');
+        formData.append('_template', 'table');
+        formData.append('Penerima', user.email);
+        formData.append('Tanggal Cetak', today);
+        formData.append('Total Saldo Utama', formatIDR(balance));
+        formData.append('Saldo Cash', formatIDR(cashBalance));
+        formData.append('Saldo Cashless', formatIDR(cashlessBalance));
+        formData.append('Jumlah Transaksi', `${transactions.length} catatan`);
+        formData.append('Status', 'Terverifikasi & Diterbitkan');
+        // Lampiran PDF fisik — FormSubmit field 'attachment'
+        formData.append('attachment', pdfFile, filename);
+
+        // FormData harus dikirim ke endpoint NON-ajax (bukan /ajax/) supaya attachment diteruskan
+        const res = await fetch(`https://formsubmit.co/${user.email}`, {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json'
-          },
-          body: JSON.stringify({
-            _subject: `[Money Management] Laporan Keuangan Personal - ${today}`,
-            _template: 'table',
-            "Penerima": user.email,
-            "Tanggal Cetak Laporan": today,
-            "Total Saldo Utama": formatIDR(balance),
-            "Saldo Kas (Cash)": formatIDR(cashBalance),
-            "Saldo Non-Tunai (Cashless)": formatIDR(cashlessBalance),
-            "Jumlah Riwayat Transaksi": `${transactions.length} catatan`,
-            "Status Laporan": "Terverifikasi & Diterbitkan"
-          })
+          body: formData
         });
 
-        if (!res.ok) {
-          throw new Error('Gagal mengirimkan email laporan.');
-        }
+        // FormSubmit non-ajax redirect ke halaman terima kasih — tidak ada JSON response
+        // Selama tidak throw, dianggap berhasil
 
         await supabase.from('profiles').upsert({
           user_id: user.id,
