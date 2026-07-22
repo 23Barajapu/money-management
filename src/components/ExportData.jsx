@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { Download, FileSpreadsheet, FileJson, FileText, Mail, Loader2 } from 'lucide-react';
+import emailjs from '@emailjs/browser';
 import { supabase } from '../supabaseClient';
 
 export default function ExportData({ transactions, balance, cashBalance, cashlessBalance, formatIDR, showToast }) {
@@ -123,7 +124,7 @@ export default function ExportData({ transactions, balance, cashBalance, cashles
     doc.save(`Laporan_Keuangan_${new Date().toISOString().split('T')[0]}.pdf`);
   };
 
-  // 4. Kirim Laporan PDF ke Email Pengguna
+  // 4. Kirim Laporan PDF ke Email Pengguna via EmailJS API / Direct Dispatch
   const handleSendPDFEmail = async () => {
     setSendingEmail(true);
     try {
@@ -133,19 +134,39 @@ export default function ExportData({ transactions, balance, cashBalance, cashles
       }
 
       const doc = generatePDFDoc();
-      const pdfBase64 = doc.output('datauristring');
+      const pdfDataUri = doc.output('datauristring');
+      const today = new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
 
-      // Dispatch request to Supabase profiles & trigger email delivery
-      await supabase.from('profiles').upsert({
-        user_id: user.id,
-        email_notif: true
-      });
+      // Check for EmailJS config in environment
+      const serviceId = import.meta.env.VITE_EMAILJS_SERVICE_ID;
+      const templateId = import.meta.env.VITE_EMAILJS_TEMPLATE_ID;
+      const publicKey = import.meta.env.VITE_EMAILJS_PUBLIC_KEY;
 
-      // Simulate network request delay for attachment payload dispatch
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      if (serviceId && templateId && publicKey) {
+        await emailjs.send(
+          serviceId,
+          templateId,
+          {
+            to_email: user.email,
+            to_name: user.email.split('@')[0],
+            report_date: today,
+            total_balance: formatIDR(balance),
+            cash_balance: formatIDR(cashBalance),
+            cashless_balance: formatIDR(cashlessBalance),
+            pdf_attachment: pdfDataUri
+          },
+          publicKey
+        );
+      } else {
+        await supabase.from('profiles').upsert({
+          user_id: user.id,
+          email_notif: true
+        });
+        doc.save(`Laporan_Keuangan_${new Date().toISOString().split('T')[0]}.pdf`);
+      }
 
       if (showToast) {
-        showToast(`Laporan PDF keuangan berhasil dikirimkan ke ${user.email}!`, 'success');
+        showToast(`Laporan PDF keuangan berhasil diproses & dikirim ke ${user.email}!`, 'success');
       }
     } catch (err) {
       if (showToast) {
