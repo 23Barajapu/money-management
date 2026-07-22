@@ -295,26 +295,37 @@ input:focus, select:focus, textarea:focus {
   display: flex;
   flex-direction: column;
   gap: 0.25rem;
+  min-width: 0;
+  flex: 1;
+  margin-right: 0.75rem;
 }
 
 .item-title {
   font-weight: 600;
   font-size: 0.95rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .item-meta {
   font-size: 0.75rem;
   color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .item-amount-action {
   display: flex;
   align-items: center;
   gap: 1rem;
+  flex-shrink: 0;
 }
 
 .item-amount {
   font-weight: 700;
+  white-space: nowrap;
 }
 
 .item-amount.income { color: var(--income-color); }
