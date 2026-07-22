@@ -292,8 +292,9 @@ export default function App() {
     }
   };
 
-  const handlePayInstallment = async (id, amount) => {
+  const handlePayInstallment = async (id, amount, paymentMethod = 'wallet_cash') => {
     const targetInst = installments.find(i => i.id === id);
+    if (!targetInst) return;
     const updatedPaid = targetInst.paidAmount + amount;
 
     try {
@@ -312,7 +313,7 @@ export default function App() {
         amount: amount,
         category: 'Cicilan',
         date: new Date().toISOString().split('T')[0],
-        payment_method: 'cashless'
+        payment_method: paymentMethod || 'wallet_cash'
       };
       await handleAddTransaction(newTx);
 
@@ -677,6 +678,9 @@ export default function App() {
             <Reminders 
               onAddTransaction={handleAddTransaction} 
               formatIDR={formatIDR} 
+              wallets={walletsWithUpdatedBalances}
+              installments={installments}
+              onPayInstallment={handlePayInstallment}
             />
             <InstallmentTracker 
               installments={installments}
@@ -684,6 +688,7 @@ export default function App() {
               onDeleteInstallment={handleDeleteInstallment}
               onPayInstallment={handlePayInstallment}
               balance={balance}
+              wallets={walletsWithUpdatedBalances}
             />
           </div>
         )}

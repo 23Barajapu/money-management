@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
-import { CreditCard, Plus, Trash2, CheckCircle } from 'lucide-react';
+import { CreditCard, Plus, Trash2, CheckCircle, Wallet } from 'lucide-react';
 
-export default function InstallmentTracker({ installments, onAddInstallment, onDeleteInstallment, onPayInstallment, balance }) {
+export default function InstallmentTracker({ installments, onAddInstallment, onDeleteInstallment, onPayInstallment, balance, wallets = [] }) {
   const [name, setName] = useState('');
   const [months, setMonths] = useState('');
   const [monthlyPayment, setMonthlyPayment] = useState('');
   const [showAddForm, setShowAddForm] = useState(false);
   const [customPayAmount, setCustomPayAmount] = useState({});
+  const [selectedWallet, setSelectedWallet] = useState({});
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -32,8 +33,11 @@ export default function InstallmentTracker({ installments, onAddInstallment, onD
     const payVal = parseFloat(amount);
     if (isNaN(payVal) || payVal <= 0) return;
 
-    if (payVal > balance) {
-      alert('Saldo utama tidak mencukupi!');
+    const walletId = selectedWallet[inst.id] || (wallets[0]?.id || 'wallet_cash');
+    const chosenWallet = wallets.find(w => w.id === walletId);
+
+    if (chosenWallet && payVal > chosenWallet.balance) {
+      alert(`Saldo ${chosenWallet.name} (${formatIDR(chosenWallet.balance)}) tidak mencukupi untuk pembayaran sebesar ${formatIDR(payVal)}!`);
       return;
     }
 
@@ -43,7 +47,7 @@ export default function InstallmentTracker({ installments, onAddInstallment, onD
       return;
     }
 
-    onPayInstallment(inst.id, payVal);
+    onPayInstallment(inst.id, payVal, walletId);
     // clear input custom if exists
     setCustomPayAmount(prev => ({ ...prev, [inst.id]: '' }));
   };
@@ -117,6 +121,7 @@ export default function InstallmentTracker({ installments, onAddInstallment, onD
             const remaining = inst.totalAmount - inst.paidAmount;
             const progress = Math.min(Math.round((inst.paidAmount / inst.totalAmount) * 100), 100);
             const isSettled = remaining <= 0;
+            const currentWalletId = selectedWallet[inst.id] || (wallets[0]?.id || 'wallet_cash');
 
             return (
               <div key={inst.id} style={{ background: 'rgba(15, 23, 42, 0.3)', border: '1px solid var(--border-color)', padding: '1rem', borderRadius: '0.75rem' }}>
@@ -156,7 +161,34 @@ export default function InstallmentTracker({ installments, onAddInstallment, onD
                 </div>
 
                 {!isSettled && (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: '0.75rem' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: '0.75rem', paddingTop: '0.75rem', borderTop: '1px dashed var(--border-color)' }}>
+                    
+                    {/* Wallet Selector Options */}
+                    <div className="form-group" style={{ marginBottom: '0.25rem' }}>
+                      <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                        <Wallet size={12} /> Sumber Uang / Dompet Pembayaran:
+                      </label>
+                      <select
+                        value={currentWalletId}
+                        onChange={(e) => setSelectedWallet(prev => ({ ...prev, [inst.id]: e.target.value }))}
+                        className="currency-select"
+                        style={{ width: '100%', padding: '0.4rem 0.6rem', fontSize: '0.85rem' }}
+                      >
+                        {wallets.length === 0 ? (
+                          <>
+                            <option value="wallet_cash">Dompet Cash</option>
+                            <option value="wallet_cashless">Rekening Bank</option>
+                          </>
+                        ) : (
+                          wallets.map(w => (
+                            <option key={w.id} value={w.id}>
+                              {w.name} ({formatIDR(w.balance)})
+                            </option>
+                          ))
+                        )}
+                      </select>
+                    </div>
+
                     <div style={{ display: 'flex', gap: '0.5rem' }}>
                       <input
                         type="number"

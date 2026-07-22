@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
-import { Calendar, Bell, Plus, Trash2, CheckCircle2, Clock, Play } from 'lucide-react';
+import { Calendar, Bell, Plus, Trash2, CheckCircle2, Clock, Play, Wallet, CreditCard } from 'lucide-react';
 
-export default function Reminders({ onAddTransaction, formatIDR }) {
+export default function Reminders({ onAddTransaction, formatIDR, wallets = [], installments = [], onPayInstallment }) {
   const [recurrings, setRecurrings] = useState([]);
   const [bills, setBills] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -12,13 +12,17 @@ export default function Reminders({ onAddTransaction, formatIDR }) {
   const [recTitle, setRecTitle] = useState('');
   const [recAmount, setRecAmount] = useState('');
   const [recCategory, setRecCategory] = useState('Lainnya');
-  const [recMethod, setRecMethod] = useState('cash');
+  const [recMethod, setRecMethod] = useState('wallet_cash');
   const [recInterval, setRecInterval] = useState('monthly');
 
   // Form states - Bills
   const [billName, setBillName] = useState('');
   const [billAmount, setBillAmount] = useState('');
   const [billDueDate, setBillDueDate] = useState('');
+  
+  // Selected wallet state for paying bills & paying installments from reminder
+  const [selectedBillWallet, setSelectedBillWallet] = useState({});
+  const [selectedInstWallet, setSelectedInstWallet] = useState({});
 
   const categories = ['Makanan', 'Transportasi', 'Hiburan', 'Belanja', 'Kesehatan', 'Edukasi', 'Lainnya'];
 
@@ -67,7 +71,6 @@ export default function Reminders({ onAddTransaction, formatIDR }) {
       } else if (item.interval === 'weekly' && diffDays >= 7) {
         shouldTrigger = true;
       } else if (item.interval === 'monthly' && diffDays >= 30) {
-        // Simple monthly check
         shouldTrigger = true;
       }
 
@@ -82,7 +85,7 @@ export default function Reminders({ onAddTransaction, formatIDR }) {
             amount: parseFloat(item.amount),
             category: item.category,
             date: todayStr,
-            payment_method: item.payment_method
+            payment_method: item.payment_method || (wallets[0]?.id || 'wallet_cash')
           };
 
           // Call onAddTransaction parent function to trigger UI sync/insert
@@ -115,7 +118,7 @@ export default function Reminders({ onAddTransaction, formatIDR }) {
         title: recTitle,
         amount: parseFloat(recAmount),
         category: recCategory,
-        payment_method: recMethod,
+        payment_method: recMethod || (wallets[0]?.id || 'wallet_cash'),
         interval: recInterval,
         last_triggered: new Date().toISOString().split('T')[0]
       };
@@ -171,7 +174,15 @@ export default function Reminders({ onAddTransaction, formatIDR }) {
 
   const handlePayBill = async (bill) => {
     if (bill.is_paid) return;
-    const confirmPay = confirm(`Bayar tagihan "${bill.name}" sebesar ${formatIDR(bill.amount)}? Transaksi pengeluaran otomatis akan dicatat.`);
+    const walletId = selectedBillWallet[bill.id] || (wallets[0]?.id || 'wallet_cash');
+    const chosenWallet = wallets.find(w => w.id === walletId);
+    
+    if (chosenWallet && bill.amount > chosenWallet.balance) {
+      alert(`Saldo ${chosenWallet.name} (${formatIDR(chosenWallet.balance)}) tidak mencukupi untuk bayar tagihan ${formatIDR(bill.amount)}!`);
+      return;
+    }
+
+    const confirmPay = confirm(`Bayar tagihan "${bill.name}" sebesar ${formatIDR(bill.amount)} dari ${chosenWallet ? chosenWallet.name : 'dompet'}? Transaksi pengeluaran otomatis akan dicatat.`);
     if (!confirmPay) return;
 
     try {
@@ -182,7 +193,7 @@ export default function Reminders({ onAddTransaction, formatIDR }) {
       const { error } = await supabase.from('bills').update({ is_paid: true }).eq('id', bill.id);
       if (error) throw error;
 
-      // 2. Add automatic expense transaction
+      // 2. Add automatic expense transaction with selected wallet
       const newTx = {
         id: Date.now().toString(),
         user_id: user.id,
@@ -191,7 +202,7 @@ export default function Reminders({ onAddTransaction, formatIDR }) {
         amount: parseFloat(bill.amount),
         category: 'Lainnya',
         date: new Date().toISOString().split('T')[0],
-        payment_method: 'cashless'
+        payment_method: walletId
       };
       await onAddTransaction(newTx);
 
@@ -210,6 +221,21 @@ export default function Reminders({ onAddTransaction, formatIDR }) {
       alert(error.message);
     }
   };
+
+  const handlePayInstallmentFromReminder = (inst) => {
+    if (!onPayInstallment) return;
+    const walletId = selectedInstWallet[inst.id] || (wallets[0]?.id || 'wallet_cash');
+    const chosenWallet = wallets.find(w => w.id === walletId);
+
+    if (chosenWallet && inst.monthlyPayment > chosenWallet.balance) {
+      alert(`Saldo ${chosenWallet.name} (${formatIDR(chosenWallet.balance)}) tidak mencukupi untuk pembayaran cicilan ${formatIDR(inst.monthlyPayment)}!`);
+      return;
+    }
+
+    onPayInstallment(inst.id, inst.monthlyPayment, walletId);
+  };
+
+  const activeInstallments = installments.filter(inst => (inst.totalAmount - inst.paidAmount) > 0);
 
   return (
     <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '1.5rem' }}>
@@ -238,10 +264,18 @@ export default function Reminders({ onAddTransaction, formatIDR }) {
             </select>
           </div>
           <div className="form-group" style={{ marginBottom: 0 }}>
-            <label>Metode</label>
+            <label>Sumber Uang / Dompet</label>
             <select value={recMethod} onChange={(e) => setRecMethod(e.target.value)}>
-              <option value="cash">Cash</option>
-              <option value="cashless">Cashless</option>
+              {wallets.length === 0 ? (
+                <>
+                  <option value="wallet_cash">Dompet Cash</option>
+                  <option value="wallet_cashless">Rekening Bank</option>
+                </>
+              ) : (
+                wallets.map(w => (
+                  <option key={w.id} value={w.id}>{w.name} ({formatIDR(w.balance)})</option>
+                ))
+              )}
             </select>
           </div>
           <button type="submit" className="btn-submit" style={{ padding: '0.75rem 1rem', width: 'auto' }}>
@@ -253,36 +287,39 @@ export default function Reminders({ onAddTransaction, formatIDR }) {
           {recurrings.length === 0 ? (
             <div className="empty-state">Belum ada pencatatan transaksi berulang otomatis.</div>
           ) : (
-            recurrings.map(r => (
-              <div key={r.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(255,255,255,0.02)', padding: '1rem', borderRadius: '0.75rem', border: '1px solid var(--border-color)' }}>
-                <div>
-                  <h4 style={{ margin: 0, fontWeight: 600 }}>{r.title}</h4>
-                  <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-                    {formatIDR(r.amount)} • {r.interval === 'daily' ? 'Harian' : r.interval === 'weekly' ? 'Mingguan' : 'Bulanan'} ({r.payment_method})
-                  </span>
+            recurrings.map(r => {
+              const matchedWallet = wallets.find(w => w.id === r.payment_method);
+              return (
+                <div key={r.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(255,255,255,0.02)', padding: '1rem', borderRadius: '0.75rem', border: '1px solid var(--border-color)' }}>
+                  <div>
+                    <h4 style={{ margin: 0, fontWeight: 600 }}>{r.title}</h4>
+                    <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                      {formatIDR(r.amount)} • {r.interval === 'daily' ? 'Harian' : r.interval === 'weekly' ? 'Mingguan' : 'Bulanan'} ({matchedWallet ? matchedWallet.name : r.payment_method})
+                    </span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <span style={{ fontSize: '0.7rem', color: 'var(--accent-color)', background: 'rgba(139, 92, 246, 0.1)', padding: '0.2rem 0.5rem', borderRadius: '4px' }}>
+                      <Play size={10} style={{ display: 'inline', marginRight: '0.25rem' }} /> Terakhir: {r.last_triggered}
+                    </span>
+                    <button onClick={() => handleDeleteRecurring(r.id)} className="btn-delete">
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <span style={{ fontSize: '0.7rem', color: 'var(--accent-color)', background: 'rgba(139, 92, 246, 0.1)', padding: '0.2rem 0.5rem', borderRadius: '4px' }}>
-                    <Play size={10} style={{ display: 'inline', marginRight: '0.25rem' }} /> Terakhir: {r.last_triggered}
-                  </span>
-                  <button onClick={() => handleDeleteRecurring(r.id)} className="btn-delete">
-                    <Trash2 size={14} />
-                  </button>
-                </div>
-              </div>
-            ))
+              );
+            })
           )}
         </div>
       </div>
 
-      {/* SECTION 2: BILL REMINDERS */}
+      {/* SECTION 2: BILL REMINDERS & INTEGRATED INSTALLMENT PAYMENTS */}
       <div className="card">
         <h2 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '1.25rem', marginBottom: '1.25rem', fontWeight: 600 }}>
           <Bell size={20} color="var(--expense-color)" />
-          Pengingat Tagihan Aktif
+          Pengingat Tagihan & Cicilan Aktif
         </h2>
 
-        <form onSubmit={handleAddBill} className="bill-grid-form">
+        <form onSubmit={handleAddBill} className="bill-grid-form" style={{ marginBottom: '1.5rem' }}>
           <div className="form-group" style={{ marginBottom: 0 }}>
             <label>Nama Tagihan</label>
             <input type="text" placeholder="e.g. Listrik, Wifi" value={billName} onChange={(e) => setBillName(e.target.value)} required />
@@ -300,39 +337,111 @@ export default function Reminders({ onAddTransaction, formatIDR }) {
           </button>
         </form>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '1rem' }}>
-          {bills.length === 0 ? (
-            <div className="empty-state">Belum ada pengingat tagihan.</div>
-          ) : (
-            bills.map(b => {
-              const isOverdue = new Date(b.due_date) < new Date() && !b.is_paid;
-              return (
-                <div key={b.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: b.is_paid ? 'rgba(16, 185, 129, 0.03)' : isOverdue ? 'rgba(239, 68, 68, 0.03)' : 'rgba(255,255,255,0.02)', padding: '1rem', borderRadius: '0.75rem', border: `1px solid ${b.is_paid ? 'var(--income-color)' : isOverdue ? 'var(--expense-color)' : 'var(--border-color)'}` }}>
-                  <div>
-                    <h4 style={{ margin: 0, fontWeight: 600, textDecoration: b.is_paid ? 'line-through' : 'none', color: b.is_paid ? 'var(--text-secondary)' : 'var(--text-primary)' }}>{b.name}</h4>
-                    <span style={{ fontSize: '0.8rem', color: isOverdue ? 'var(--expense-color)' : 'var(--text-secondary)' }}>
-                      Tempo: {b.due_date} {isOverdue && '(Terlewat)'}
-                    </span>
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                    <span style={{ fontWeight: 600, fontSize: '0.9rem', marginRight: '0.5rem' }}>{formatIDR(b.amount)}</span>
-                    {!b.is_paid ? (
-                      <button onClick={() => handlePayBill(b)} className="btn-toggle active income" style={{ padding: '0.4rem 0.75rem', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                        <Clock size={12} /> Bayar
-                      </button>
-                    ) : (
-                      <span style={{ color: 'var(--income-color)', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                        <CheckCircle2 size={14} /> Lunas
-                      </span>
-                    )}
-                    <button onClick={() => handleDeleteBill(b.id)} className="btn-delete">
-                      <Trash2 size={14} />
-                    </button>
-                  </div>
-                </div>
-              );
-            })
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+          
+          {/* Bills List */}
+          <div>
+            <h4 style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', marginBottom: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              Daftar Tagihan Rutin
+            </h4>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '0.75rem' }}>
+              {bills.length === 0 ? (
+                <div className="empty-state">Belum ada pengingat tagihan.</div>
+              ) : (
+                bills.map(b => {
+                  const isOverdue = new Date(b.due_date) < new Date() && !b.is_paid;
+                  const currentWId = selectedBillWallet[b.id] || (wallets[0]?.id || 'wallet_cash');
+                  return (
+                    <div key={b.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: b.is_paid ? 'rgba(16, 185, 129, 0.03)' : isOverdue ? 'rgba(239, 68, 68, 0.03)' : 'rgba(255,255,255,0.02)', padding: '0.85rem 1rem', borderRadius: '0.75rem', border: `1px solid ${b.is_paid ? 'var(--income-color)' : isOverdue ? 'var(--expense-color)' : 'var(--border-color)'}` }}>
+                      <div>
+                        <h4 style={{ margin: 0, fontWeight: 600, textDecoration: b.is_paid ? 'line-through' : 'none', color: b.is_paid ? 'var(--text-secondary)' : 'var(--text-primary)' }}>{b.name}</h4>
+                        <span style={{ fontSize: '0.8rem', color: isOverdue ? 'var(--expense-color)' : 'var(--text-secondary)' }}>
+                          Tempo: {b.due_date} {isOverdue && '(Terlewat)'}
+                        </span>
+                      </div>
+
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                        <span style={{ fontWeight: 600, fontSize: '0.9rem' }}>{formatIDR(b.amount)}</span>
+                        {!b.is_paid ? (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                            <select
+                              value={currentWId}
+                              onChange={(e) => setSelectedBillWallet(prev => ({ ...prev, [b.id]: e.target.value }))}
+                              className="currency-select"
+                              style={{ padding: '0.3rem 0.5rem', fontSize: '0.75rem' }}
+                            >
+                              {wallets.map(w => (
+                                <option key={w.id} value={w.id}>
+                                  {w.name} ({formatIDR(w.balance)})
+                                </option>
+                              ))}
+                            </select>
+                            <button onClick={() => handlePayBill(b)} className="btn-toggle active income" style={{ padding: '0.4rem 0.75rem', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                              <Clock size={12} /> Bayar
+                            </button>
+                          </div>
+                        ) : (
+                          <span style={{ color: 'var(--income-color)', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                            <CheckCircle2 size={14} /> Lunas
+                          </span>
+                        )}
+                        <button onClick={() => handleDeleteBill(b.id)} className="btn-delete">
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </div>
+
+          {/* Integrated Active Installments List */}
+          {activeInstallments.length > 0 && (
+            <div style={{ marginTop: '0.5rem', paddingTop: '1rem', borderTop: '1px dashed var(--border-color)' }}>
+              <h4 style={{ fontSize: '0.9rem', color: 'var(--expense-color)', marginBottom: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                <CreditCard size={14} /> Tagihan Cicilan Bulanan Berjalan
+              </h4>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '0.75rem' }}>
+                {activeInstallments.map(inst => {
+                  const remaining = inst.totalAmount - inst.paidAmount;
+                  const currentInstWId = selectedInstWallet[inst.id] || (wallets[0]?.id || 'wallet_cash');
+                  return (
+                    <div key={inst.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(239, 68, 68, 0.02)', padding: '0.85rem 1rem', borderRadius: '0.75rem', border: '1px solid rgba(239, 68, 68, 0.2)' }}>
+                      <div>
+                        <h4 style={{ margin: 0, fontWeight: 600 }}>{inst.name}</h4>
+                        <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                          Tagihan Bulan Ini: <strong>{formatIDR(inst.monthlyPayment)}</strong> (Sisa Total: {formatIDR(remaining)})
+                        </span>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <select
+                          value={currentInstWId}
+                          onChange={(e) => setSelectedInstWallet(prev => ({ ...prev, [inst.id]: e.target.value }))}
+                          className="currency-select"
+                          style={{ padding: '0.3rem 0.5rem', fontSize: '0.75rem' }}
+                        >
+                          {wallets.map(w => (
+                            <option key={w.id} value={w.id}>
+                              {w.name} ({formatIDR(w.balance)})
+                            </option>
+                          ))}
+                        </select>
+                        <button 
+                          onClick={() => handlePayInstallmentFromReminder(inst)}
+                          className="btn-submit" 
+                          style={{ padding: '0.4rem 0.75rem', fontSize: '0.8rem', width: 'auto', background: 'var(--expense-color)' }}
+                        >
+                          Bayar Cicilan
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
           )}
+
         </div>
       </div>
     </div>
