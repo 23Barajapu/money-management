@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
 import { User, Shield, CreditCard, Bell, X, Check, Key } from 'lucide-react';
 
-export default function ProfileModal({ isOpen, onClose, profile, setProfile, currency, setCurrency }) {
+export default function ProfileModal({ isOpen, onClose, profile, setProfile, currency, setCurrency, showToast, showConfirm }) {
   const [activeTab, setActiveTab] = useState('account');
   const [paydayDate, setPaydayDate] = useState(1);
   const [emailNotif, setEmailNotif] = useState(true);
@@ -47,24 +47,36 @@ export default function ProfileModal({ isOpen, onClose, profile, setProfile, cur
 
       setProfile(updatedProfile);
       setSuccessMsg('Pengaturan berhasil disimpan!');
+      if (showToast) showToast('Pengaturan profil disimpan!', 'success');
       setTimeout(() => setSuccessMsg(''), 3000);
     } catch (error) {
-      alert('Gagal menyimpan profil: ' + error.message);
+      if (showToast) showToast('Gagal menyimpan profil: ' + error.message, 'error');
     } finally {
       setLoading(false);
     }
   };
 
   const handleResetPassword = async () => {
-    if (!confirm(`Kirim link ubah sandi ke email ${email}?`)) return;
-    try {
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: window.location.origin
-      });
-      if (error) throw error;
-      alert('Email pengubahan sandi berhasil dikirim! Silakan periksa inbox/spam folder Anda.');
-    } catch (error) {
-      alert('Gagal mengirim email reset sandi: ' + error.message);
+    const doReset = async () => {
+      try {
+        const { error } = await supabase.auth.resetPasswordForEmail(email, {
+          redirectTo: window.location.origin
+        });
+        if (error) throw error;
+        if (showToast) showToast('Email pengubahan sandi berhasil dikirim! Silakan periksa inbox/spam Anda.', 'success');
+      } catch (error) {
+        if (showToast) showToast('Gagal mengirim email reset sandi: ' + error.message, 'error');
+      }
+    };
+
+    if (showConfirm) {
+      showConfirm(
+        'Ubah Password Akun',
+        `Kirim tautan reset kata sandi ke email ${email}?`,
+        doReset
+      );
+    } else {
+      doReset();
     }
   };
 

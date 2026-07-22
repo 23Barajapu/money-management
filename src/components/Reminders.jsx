@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
 import { Calendar, Bell, Plus, Trash2, CheckCircle2, Clock, Play, Wallet, CreditCard } from 'lucide-react';
 
-export default function Reminders({ onAddTransaction, formatIDR, wallets = [], installments = [], onPayInstallment }) {
+export default function Reminders({ onAddTransaction, formatIDR, wallets = [], installments = [], onPayInstallment, showToast, showConfirm }) {
   const [recurrings, setRecurrings] = useState([]);
   const [bills, setBills] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -50,7 +50,7 @@ export default function Reminders({ onAddTransaction, formatIDR, wallets = [], i
       // Trigger automatic recurring checking on load
       checkAndTriggerRecurring(recRes.data || [], user.id);
     } catch (error) {
-      console.error('Error fetching reminders:', error);
+      if (showToast) showToast(error.message, 'error');
     } finally {
       setLoading(false);
     }
@@ -76,7 +76,6 @@ export default function Reminders({ onAddTransaction, formatIDR, wallets = [], i
 
       if (shouldTrigger) {
         try {
-          // 1. Insert into transactions
           const newTx = {
             id: Date.now().toString() + Math.random().toString(36).substr(2, 5),
             user_id: userId,
@@ -88,10 +87,8 @@ export default function Reminders({ onAddTransaction, formatIDR, wallets = [], i
             payment_method: item.payment_method || (wallets[0]?.id || 'wallet_cash')
           };
 
-          // Call onAddTransaction parent function to trigger UI sync/insert
           await onAddTransaction(newTx);
 
-          // 2. Update last_triggered in recurring_transactions
           await supabase
             .from('recurring_transactions')
             .update({ last_triggered: todayStr })
@@ -128,9 +125,10 @@ export default function Reminders({ onAddTransaction, formatIDR, wallets = [], i
 
       setRecTitle('');
       setRecAmount('');
+      if (showToast) showToast('Transaksi berulang berhasil ditambahkan!', 'success');
       fetchData();
     } catch (error) {
-      alert(error.message);
+      if (showToast) showToast(error.message, 'error');
     }
   };
 
@@ -138,9 +136,10 @@ export default function Reminders({ onAddTransaction, formatIDR, wallets = [], i
     try {
       const { error } = await supabase.from('recurring_transactions').delete().eq('id', id);
       if (error) throw error;
+      if (showToast) showToast('Transaksi berulang dihapus', 'info');
       fetchData();
     } catch (error) {
-      alert(error.message);
+      if (showToast) showToast(error.message, 'error');
     }
   };
 
@@ -166,9 +165,10 @@ export default function Reminders({ onAddTransaction, formatIDR, wallets = [], i
       setBillName('');
       setBillAmount('');
       setBillDueDate('');
+      if (showToast) showToast('Pengingat tagihan berhasil disimpan!', 'success');
       fetchData();
     } catch (error) {
-      alert(error.message);
+      if (showToast) showToast(error.message, 'error');
     }
   };
 
@@ -178,37 +178,44 @@ export default function Reminders({ onAddTransaction, formatIDR, wallets = [], i
     const chosenWallet = wallets.find(w => w.id === walletId);
     
     if (chosenWallet && bill.amount > chosenWallet.balance) {
-      alert(`Saldo ${chosenWallet.name} (${formatIDR(chosenWallet.balance)}) tidak mencukupi untuk bayar tagihan ${formatIDR(bill.amount)}!`);
+      if (showToast) showToast(`Saldo ${chosenWallet.name} (${formatIDR(chosenWallet.balance)}) tidak mencukupi untuk bayar tagihan ${formatIDR(bill.amount)}!`, 'error');
       return;
     }
 
-    const confirmPay = confirm(`Bayar tagihan "${bill.name}" sebesar ${formatIDR(bill.amount)} dari ${chosenWallet ? chosenWallet.name : 'dompet'}? Transaksi pengeluaran otomatis akan dicatat.`);
-    if (!confirmPay) return;
+    const processPayment = async () => {
+      try {
+        const user = (await supabase.auth.getUser()).data.user;
+        if (!user) return;
 
-    try {
-      const user = (await supabase.auth.getUser()).data.user;
-      if (!user) return;
+        const { error } = await supabase.from('bills').update({ is_paid: true }).eq('id', bill.id);
+        if (error) throw error;
 
-      // 1. Mark as paid
-      const { error } = await supabase.from('bills').update({ is_paid: true }).eq('id', bill.id);
-      if (error) throw error;
+        const newTx = {
+          id: Date.now().toString(),
+          user_id: user.id,
+          type: 'expense',
+          title: `Bayar Tagihan: ${bill.name}`,
+          amount: parseFloat(bill.amount),
+          category: 'Lainnya',
+          date: new Date().toISOString().split('T')[0],
+          payment_method: walletId
+        };
+        await onAddTransaction(newTx);
+        if (showToast) showToast(`Tagihan ${bill.name} berhasil dibayar!`, 'success');
+        fetchData();
+      } catch (error) {
+        if (showToast) showToast(error.message, 'error');
+      }
+    };
 
-      // 2. Add automatic expense transaction with selected wallet
-      const newTx = {
-        id: Date.now().toString(),
-        user_id: user.id,
-        type: 'expense',
-        title: `Bayar Tagihan: ${bill.name}`,
-        amount: parseFloat(bill.amount),
-        category: 'Lainnya',
-        date: new Date().toISOString().split('T')[0],
-        payment_method: walletId
-      };
-      await onAddTransaction(newTx);
-
-      fetchData();
-    } catch (error) {
-      alert(error.message);
+    if (showConfirm) {
+      showConfirm(
+        'Konfirmasi Pembayaran Tagihan',
+        `Bayar tagihan "${bill.name}" sebesar ${formatIDR(bill.amount)} menggunakan ${chosenWallet ? chosenWallet.name : 'dompet'}?`,
+        processPayment
+      );
+    } else {
+      processPayment();
     }
   };
 
@@ -216,9 +223,10 @@ export default function Reminders({ onAddTransaction, formatIDR, wallets = [], i
     try {
       const { error } = await supabase.from('bills').delete().eq('id', id);
       if (error) throw error;
+      if (showToast) showToast('Tagihan berhasil dihapus', 'info');
       fetchData();
     } catch (error) {
-      alert(error.message);
+      if (showToast) showToast(error.message, 'error');
     }
   };
 
@@ -228,7 +236,7 @@ export default function Reminders({ onAddTransaction, formatIDR, wallets = [], i
     const chosenWallet = wallets.find(w => w.id === walletId);
 
     if (chosenWallet && inst.monthlyPayment > chosenWallet.balance) {
-      alert(`Saldo ${chosenWallet.name} (${formatIDR(chosenWallet.balance)}) tidak mencukupi untuk pembayaran cicilan ${formatIDR(inst.monthlyPayment)}!`);
+      if (showToast) showToast(`Saldo ${chosenWallet.name} (${formatIDR(chosenWallet.balance)}) tidak mencukupi!`, 'error');
       return;
     }
 

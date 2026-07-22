@@ -24,6 +24,8 @@ import AdvancedAnalytics from './components/AdvancedAnalytics';
 import ExportData from './components/ExportData';
 import WalletManager from './components/WalletManager';
 import ProfileModal from './components/ProfileModal';
+import Toast from './components/Toast';
+import ConfirmModal from './components/ConfirmModal';
 import Auth from './components/Auth';
 
 export default function App() {
@@ -40,6 +42,28 @@ export default function App() {
   const [profile, setProfile] = useState({ payday_date: 1, email_notif: true, push_notif: true });
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [logoutMessage, setLogoutMessage] = useState('');
+  const [toast, setToast] = useState({ message: '', type: 'info' });
+  const [confirmState, setConfirmState] = useState({ isOpen: false, title: '', message: '', onConfirm: null, isDanger: false });
+
+  const showToast = (message, type = 'info') => {
+    setToast({ message, type });
+    setTimeout(() => {
+      setToast(prev => (prev.message === message ? { message: '', type: 'info' } : prev));
+    }, 4000);
+  };
+
+  const showConfirm = (title, message, onConfirm, isDanger = false) => {
+    setConfirmState({
+      isOpen: true,
+      title,
+      message,
+      onConfirm: async () => {
+        setConfirmState(prev => ({ ...prev, isOpen: false }));
+        if (onConfirm) await onConfirm();
+      },
+      isDanger
+    });
+  };
 
   useEffect(() => {
     fetch('https://open.er-api.com/v6/latest/IDR')
@@ -224,8 +248,9 @@ export default function App() {
           });
       if (error) throw error;
       setTransactions(prev => [newTx, ...prev]);
+      showToast('Transaksi berhasil dicatat!', 'success');
     } catch (err) {
-      alert('Gagal menyimpan transaksi: ' + err.message);
+      showToast('Gagal menyimpan transaksi: ' + err.message, 'error');
     }
   };
 
@@ -237,8 +262,9 @@ export default function App() {
         .eq('id', id);
       if (error) throw error;
       setTransactions(prev => prev.filter(t => t.id !== id));
+      showToast('Transaksi berhasil dihapus', 'info');
     } catch (err) {
-      alert('Gagal menghapus transaksi: ' + err.message);
+      showToast('Gagal menghapus transaksi: ' + err.message, 'error');
     }
   };
 
@@ -274,8 +300,9 @@ export default function App() {
         });
       if (error) throw error;
       setInstallments(prev => [...prev, newInst]);
+      showToast('Cicilan berhasil ditambahkan!', 'success');
     } catch (err) {
-      alert('Gagal menambahkan cicilan: ' + err.message);
+      showToast('Gagal menambahkan cicilan: ' + err.message, 'error');
     }
   };
 
@@ -287,8 +314,9 @@ export default function App() {
         .eq('id', id);
       if (error) throw error;
       setInstallments(prev => prev.filter(i => i.id !== id));
+      showToast('Cicilan berhasil dihapus', 'info');
     } catch (err) {
-      alert('Gagal menghapus cicilan: ' + err.message);
+      showToast('Gagal menghapus cicilan: ' + err.message, 'error');
     }
   };
 
@@ -324,24 +352,31 @@ export default function App() {
         }
         return inst;
       }));
+      showToast(`Pembayaran cicilan ${targetInst.name} berhasil!`, 'success');
     } catch (err) {
-      alert('Gagal membayar cicilan: ' + err.message);
+      showToast('Gagal membayar cicilan: ' + err.message, 'error');
     }
   };
 
   const resetData = async () => {
-    if (window.confirm('Apakah Anda yakin ingin menghapus semua data di cloud?')) {
-      try {
-        const userId = session.user.id;
-        await supabase.from('transactions').delete().eq('user_id', userId);
-        await supabase.from('savings_goals').delete().eq('user_id', userId);
-        await supabase.from('installments').delete().eq('user_id', userId);
-        setTransactions([]);
-        setInstallments([]);
-      } catch (err) {
-        alert('Gagal me-reset data: ' + err.message);
-      }
-    }
+    showConfirm(
+      'Reset Data Cloud',
+      'Apakah Anda yakin ingin menghapus semua data transaksi, tabungan, dan cicilan di cloud?',
+      async () => {
+        try {
+          const userId = session.user.id;
+          await supabase.from('transactions').delete().eq('user_id', userId);
+          await supabase.from('savings_goals').delete().eq('user_id', userId);
+          await supabase.from('installments').delete().eq('user_id', userId);
+          setTransactions([]);
+          setInstallments([]);
+          showToast('Seluruh data berhasil di-reset!', 'info');
+        } catch (err) {
+          showToast('Gagal me-reset data: ' + err.message, 'error');
+        }
+      },
+      true
+    );
   };
 
   const handleLogout = async () => {
@@ -599,6 +634,8 @@ export default function App() {
                 wallets={walletsWithUpdatedBalances} 
                 fetchUserData={fetchUserData} 
                 formatIDR={formatIDR} 
+                showToast={showToast}
+                showConfirm={showConfirm}
               />
             </div>
           </div>
@@ -668,6 +705,8 @@ export default function App() {
               transactions={transactions} 
               formatIDR={formatIDR} 
               paydayDate={profile?.payday_date || 1}
+              showToast={showToast}
+              showConfirm={showConfirm}
             />
           </div>
         )}
@@ -681,6 +720,8 @@ export default function App() {
               wallets={walletsWithUpdatedBalances}
               installments={installments}
               onPayInstallment={handlePayInstallment}
+              showToast={showToast}
+              showConfirm={showConfirm}
             />
             <InstallmentTracker 
               installments={installments}
@@ -689,6 +730,7 @@ export default function App() {
               onPayInstallment={handlePayInstallment}
               balance={balance}
               wallets={walletsWithUpdatedBalances}
+              showToast={showToast}
             />
           </div>
         )}
@@ -719,6 +761,23 @@ export default function App() {
         setProfile={setProfile} 
         currency={currency} 
         setCurrency={setCurrency} 
+        showToast={showToast}
+        showConfirm={showConfirm}
+      />
+
+      <Toast 
+        message={toast.message} 
+        type={toast.type} 
+        onClose={() => setToast({ message: '', type: 'info' })} 
+      />
+
+      <ConfirmModal 
+        isOpen={confirmState.isOpen}
+        title={confirmState.title}
+        message={confirmState.message}
+        onConfirm={confirmState.onConfirm}
+        onCancel={() => setConfirmState(prev => ({ ...prev, isOpen: false }))}
+        isDanger={confirmState.isDanger}
       />
     </div>
   );

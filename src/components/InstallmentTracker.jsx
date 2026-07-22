@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { CreditCard, Plus, Trash2, CheckCircle, Wallet } from 'lucide-react';
 
-export default function InstallmentTracker({ installments, onAddInstallment, onDeleteInstallment, onPayInstallment, balance, wallets = [] }) {
+export default function InstallmentTracker({ installments, onAddInstallment, onDeleteInstallment, onPayInstallment, balance, wallets = [], showToast }) {
   const [name, setName] = useState('');
   const [months, setMonths] = useState('');
   const [monthlyPayment, setMonthlyPayment] = useState('');
@@ -37,18 +37,17 @@ export default function InstallmentTracker({ installments, onAddInstallment, onD
     const chosenWallet = wallets.find(w => w.id === walletId);
 
     if (chosenWallet && payVal > chosenWallet.balance) {
-      alert(`Saldo ${chosenWallet.name} (${formatIDR(chosenWallet.balance)}) tidak mencukupi untuk pembayaran sebesar ${formatIDR(payVal)}!`);
+      if (showToast) showToast(`Saldo ${chosenWallet.name} (${formatIDR(chosenWallet.balance)}) tidak mencukupi!`, 'error');
       return;
     }
 
     const remaining = inst.totalAmount - inst.paidAmount;
     if (payVal > remaining) {
-      alert('Jumlah pembayaran melebihi sisa cicilan!');
+      if (showToast) showToast('Jumlah pembayaran melebihi sisa cicilan!', 'error');
       return;
     }
 
     onPayInstallment(inst.id, payVal, walletId);
-    // clear input custom if exists
     setCustomPayAmount(prev => ({ ...prev, [inst.id]: '' }));
   };
 
@@ -162,8 +161,6 @@ export default function InstallmentTracker({ installments, onAddInstallment, onD
 
                 {!isSettled && (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: '0.75rem', paddingTop: '0.75rem', borderTop: '1px dashed var(--border-color)' }}>
-                    
-                    {/* Wallet Selector Options */}
                     <div className="form-group" style={{ marginBottom: '0.25rem' }}>
                       <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
                         <Wallet size={12} /> Sumber Uang / Dompet Pembayaran:

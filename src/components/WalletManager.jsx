@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { supabase } from '../supabaseClient';
 import { Wallet, Plus, Trash2, ArrowUpRight, ArrowDownLeft } from 'lucide-react';
 
-export default function WalletManager({ wallets, fetchUserData, formatIDR }) {
+export default function WalletManager({ wallets, fetchUserData, formatIDR, showToast, showConfirm }) {
   const [name, setName] = useState('');
   const [type, setType] = useState('cash');
   const [balance, setBalance] = useState('');
@@ -30,9 +30,10 @@ export default function WalletManager({ wallets, fetchUserData, formatIDR }) {
 
       setName('');
       setBalance('');
+      if (showToast) showToast('Dompet baru berhasil ditambahkan!', 'success');
       await fetchUserData(); // Refresh wallets in parent state
     } catch (error) {
-      alert('Gagal menambahkan dompet: ' + error.message);
+      if (showToast) showToast('Gagal menambahkan dompet: ' + error.message, 'error');
     } finally {
       setLoading(false);
     }
@@ -40,17 +41,30 @@ export default function WalletManager({ wallets, fetchUserData, formatIDR }) {
 
   const handleDeleteWallet = async (id, walletName) => {
     if (walletName === 'Dompet Cash' || walletName === 'Rekening Bank') {
-      alert('Dompet default tidak boleh dihapus.');
+      if (showToast) showToast('Dompet default tidak boleh dihapus.', 'warning');
       return;
     }
-    if (!confirm(`Hapus dompet "${walletName}"? Semua riwayat saldo terkait mungkin terpengaruh.`)) return;
 
-    try {
-      const { error } = await supabase.from('wallets').delete().eq('id', id);
-      if (error) throw error;
-      await fetchUserData();
-    } catch (error) {
-      alert('Gagal menghapus dompet: ' + error.message);
+    const doDelete = async () => {
+      try {
+        const { error } = await supabase.from('wallets').delete().eq('id', id);
+        if (error) throw error;
+        if (showToast) showToast('Dompet berhasil dihapus', 'info');
+        await fetchUserData();
+      } catch (error) {
+        if (showToast) showToast('Gagal menghapus dompet: ' + error.message, 'error');
+      }
+    };
+
+    if (showConfirm) {
+      showConfirm(
+        'Hapus Dompet',
+        `Hapus dompet "${walletName}"? Semua riwayat saldo terkait mungkin terpengaruh.`,
+        doDelete,
+        true
+      );
+    } else {
+      doDelete();
     }
   };
 

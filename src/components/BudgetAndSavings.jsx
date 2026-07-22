@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
 import { PiggyBank, Target, Plus, Trash2, ArrowUpRight, ArrowDownLeft, AlertTriangle } from 'lucide-react';
 
-export default function BudgetAndSavings({ transactions, formatIDR, paydayDate = 1 }) {
+export default function BudgetAndSavings({ transactions, formatIDR, paydayDate = 1, showToast, showConfirm }) {
   const [budgets, setBudgets] = useState([]);
   const [goals, setGoals] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -63,9 +63,10 @@ export default function BudgetAndSavings({ transactions, formatIDR, paydayDate =
       if (error) throw error;
 
       setBudgetLimit('');
+      if (showToast) showToast('Limit anggaran disimpan!', 'success');
       fetchData();
     } catch (error) {
-      alert(error.message);
+      if (showToast) showToast(error.message, 'error');
     }
   };
 
@@ -73,9 +74,10 @@ export default function BudgetAndSavings({ transactions, formatIDR, paydayDate =
     try {
       const { error } = await supabase.from('budgets').delete().eq('id', id);
       if (error) throw error;
+      if (showToast) showToast('Anggaran dihapus', 'info');
       fetchData();
     } catch (error) {
-      alert(error.message);
+      if (showToast) showToast(error.message, 'error');
     }
   };
 
@@ -128,9 +130,10 @@ export default function BudgetAndSavings({ transactions, formatIDR, paydayDate =
       setGoalName('');
       setGoalAmount('');
       setGoalSaved('0');
+      if (showToast) showToast('Target tabungan berhasil dibuat!', 'success');
       fetchData();
     } catch (error) {
-      alert(error.message);
+      if (showToast) showToast(error.message, 'error');
     }
   };
 
@@ -139,20 +142,34 @@ export default function BudgetAndSavings({ transactions, formatIDR, paydayDate =
       const updatedSaved = Math.max(0, goal.current_saved + amountChange);
       const { error } = await supabase.from('savings_goals').update({ current_saved: updatedSaved }).eq('id', goal.id);
       if (error) throw error;
+      if (showToast) showToast('Saldo tabungan diperbarui!', 'success');
       fetchData();
     } catch (error) {
-      alert(error.message);
+      if (showToast) showToast(error.message, 'error');
     }
   };
 
   const handleDeleteGoal = async (goal) => {
-    if (!confirm('Hapus target tabungan ini?')) return;
-    try {
-      const { error } = await supabase.from('savings_goals').delete().eq('id', goal.id);
-      if (error) throw error;
-      fetchData();
-    } catch (error) {
-      alert(error.message);
+    const doDelete = async () => {
+      try {
+        const { error } = await supabase.from('savings_goals').delete().eq('id', goal.id);
+        if (error) throw error;
+        if (showToast) showToast('Target tabungan dihapus', 'info');
+        fetchData();
+      } catch (error) {
+        if (showToast) showToast(error.message, 'error');
+      }
+    };
+
+    if (showConfirm) {
+      showConfirm(
+        'Hapus Target Tabungan',
+        `Apakah Anda yakin ingin menghapus target tabungan "${goal.goal_name}"?`,
+        doDelete,
+        true
+      );
+    } else {
+      doDelete();
     }
   };
 
