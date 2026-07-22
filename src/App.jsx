@@ -343,6 +343,31 @@ export default function App() {
     await supabase.auth.signOut();
   };
 
+  // Inactivity Auto-Logout (1 Minute)
+  useEffect(() => {
+    if (!session) return;
+
+    let timeoutId;
+
+    const resetTimer = () => {
+      if (timeoutId) clearTimeout(timeoutId);
+      timeoutId = setTimeout(() => {
+        handleLogout();
+        alert('Sesi Anda telah berakhir karena tidak ada aktivitas selama 1 menit.');
+      }, 60000);
+    };
+
+    const events = ['mousemove', 'keydown', 'click', 'scroll', 'touchstart'];
+    events.forEach(event => window.addEventListener(event, resetTimer));
+
+    resetTimer();
+
+    return () => {
+      if (timeoutId) clearTimeout(timeoutId);
+      events.forEach(event => window.removeEventListener(event, resetTimer));
+    };
+  }, [session]);
+
   const formatIDR = (num) => {
     if (currency === 'IDR') {
       return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(num);
