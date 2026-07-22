@@ -137,6 +137,9 @@ export default function ExportData({ transactions, balance, cashBalance, cashles
       const pdfDataUri = doc.output('datauristring');
       const today = new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
 
+      const pdfBlob = doc.output('blob');
+      const pdfFile = new File([pdfBlob], `Laporan_Keuangan_${new Date().toISOString().split('T')[0]}.pdf`, { type: 'application/pdf' });
+
       // 1. Check for EmailJS config in environment
       const serviceId = import.meta.env.VITE_EMAILJS_SERVICE_ID;
       const templateId = import.meta.env.VITE_EMAILJS_TEMPLATE_ID;
@@ -158,42 +161,27 @@ export default function ExportData({ transactions, balance, cashBalance, cashles
           publicKey
         );
       } else {
-        // 2. High-Speed Instant Email Delivery via Web3Forms API (< 1 second latency)
-        const web3Key = import.meta.env.VITE_WEB3FORMS_KEY || "e819b1ed-62cb-4654-8e3b-b27b4756598c";
+        // 2. Direct Multipart Email Delivery with PDF Attachment
+        const formData = new FormData();
+        formData.append('email', user.email);
+        formData.append('_subject', `[Money Management] Laporan Keuangan PDF - ${today}`);
+        formData.append('_captcha', 'false');
+        formData.append('_template', 'table');
+        formData.append('Penerima', user.email);
+        formData.append('Tanggal Cetak', today);
+        formData.append('Total Saldo Utama', formatIDR(balance));
+        formData.append('Saldo Cash', formatIDR(cashBalance));
+        formData.append('Saldo Cashless', formatIDR(cashlessBalance));
+        formData.append('Status Lampiran', 'File PDF Laporan Keuangan Terlampir di Email Ini');
+        formData.append('attachment', pdfFile, `Laporan_Keuangan_${new Date().toISOString().split('T')[0]}.pdf`);
 
         try {
-          const res = await fetch("https://api.web3forms.com/submit", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              "Accept": "application/json"
-            },
-            body: JSON.stringify({
-              access_key: web3Key,
-              name: "Money Management App",
-              email: user.email,
-              subject: `[Money Management] Laporan Keuangan Personal - ${today}`,
-              message: `Halo ${user.email.split('@')[0]},\n\nBerikut adalah Laporan Keuangan Personal Anda per tanggal ${today}:\n\n- Total Saldo Utama: ${formatIDR(balance)}\n- Saldo Cash: ${formatIDR(cashBalance)}\n- Saldo Cashless: ${formatIDR(cashlessBalance)}\n- Total Riwayat Transaksi: ${transactions.length} catatan\n\nStatus: Laporan Keuangan Resmi Terverifikasi.`
-            })
+          await fetch(`https://formsubmit.co/ajax/${user.email}`, {
+            method: 'POST',
+            body: formData
           });
-
-          const data = await res.json();
-          if (!data || !data.success) {
-            // Backup relay via FormSubmit
-            await fetch(`https://formsubmit.co/ajax/${user.email}`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-              body: JSON.stringify({
-                _subject: `[Money Management] Laporan Keuangan Personal - ${today}`,
-                _template: 'table',
-                "Penerima": user.email,
-                "Tanggal Laporan": today,
-                "Total Saldo": formatIDR(balance)
-              })
-            });
-          }
         } catch (fetchErr) {
-          console.warn('Instant email relay warning:', fetchErr);
+          console.warn('FormData PDF email dispatch error:', fetchErr);
         }
 
         // Update database profile email notification setting
