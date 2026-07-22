@@ -4,16 +4,37 @@ import { Doughnut, Bar } from 'react-chartjs-2';
 
 ChartJS.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement);
 
-export default function DashboardCharts({ transactions }) {
+export default function DashboardCharts({ transactions, paydayDate = 1 }) {
+  const isDateInCurrentPaydayCycle = (dateStr, pDate = 1) => {
+    const txDate = new Date(dateStr);
+    const now = new Date();
+    
+    let cycleStart, cycleEnd;
+    const pd = parseInt(pDate);
+    
+    if (now.getDate() >= pd) {
+      cycleStart = new Date(now.getFullYear(), now.getMonth(), pd);
+      cycleEnd = new Date(now.getFullYear(), now.getMonth() + 1, pd - 1, 23, 59, 59);
+    } else {
+      cycleStart = new Date(now.getFullYear(), now.getMonth() - 1, pd);
+      cycleEnd = new Date(now.getFullYear(), now.getMonth(), pd - 1, 23, 59, 59);
+    }
+    
+    return txDate >= cycleStart && txDate <= cycleEnd;
+  };
+
+  // Filter transactions for current payday cycle
+  const currentCycleTx = transactions.filter(t => isDateInCurrentPaydayCycle(t.date, paydayDate));
+
   // Expense by Category (Doughnut)
-  const expenses = transactions.filter(t => t.type === 'expense');
+  const expenses = currentCycleTx.filter(t => t.type === 'expense');
   const expenseCategories = [...new Set(expenses.map(t => t.category))];
   const expenseDataByCategory = expenseCategories.map(cat => 
     expenses.filter(t => t.category === cat).reduce((sum, t) => sum + t.amount, 0)
   );
 
   // Income vs Expense (Bar)
-  const totalIncome = transactions.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0);
+  const totalIncome = currentCycleTx.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0);
   const totalExpense = expenses.reduce((sum, t) => sum + t.amount, 0);
 
   const doughnutData = {

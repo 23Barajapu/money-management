@@ -162,14 +162,39 @@ export default function App() {
     }
   };
 
-  // Calculations (Memoized for efficiency)
-  const totalIncome = useMemo(() => transactions
-    .filter(t => t.type === 'income')
-    .reduce((sum, t) => sum + t.amount, 0), [transactions]);
+  // Helper to check if a date is within current payday cycle
+  const isDateInCurrentPaydayCycle = (dateStr, pDate = 1) => {
+    const txDate = new Date(dateStr);
+    const now = new Date();
+    
+    let cycleStart, cycleEnd;
+    const pd = parseInt(pDate);
+    
+    if (now.getDate() >= pd) {
+      cycleStart = new Date(now.getFullYear(), now.getMonth(), pd);
+      cycleEnd = new Date(now.getFullYear(), now.getMonth() + 1, pd - 1, 23, 59, 59);
+    } else {
+      cycleStart = new Date(now.getFullYear(), now.getMonth() - 1, pd);
+      cycleEnd = new Date(now.getFullYear(), now.getMonth(), pd - 1, 23, 59, 59);
+    }
+    
+    return txDate >= cycleStart && txDate <= cycleEnd;
+  };
 
-  const totalExpense = useMemo(() => transactions
-    .filter(t => t.type === 'expense')
-    .reduce((sum, t) => sum + t.amount, 0), [transactions]);
+  // Calculations (Adjusted to Payday Cycle for Dashboard)
+  const paydayIncome = useMemo(() => {
+    const pDate = profile?.payday_date || 1;
+    return transactions
+      .filter(t => t.type === 'income' && isDateInCurrentPaydayCycle(t.date, pDate))
+      .reduce((sum, t) => sum + t.amount, 0);
+  }, [transactions, profile]);
+
+  const paydayExpense = useMemo(() => {
+    const pDate = profile?.payday_date || 1;
+    return transactions
+      .filter(t => t.type === 'expense' && isDateInCurrentPaydayCycle(t.date, pDate))
+      .reduce((sum, t) => sum + t.amount, 0);
+  }, [transactions, profile]);
 
   const totalDeposits = useMemo(() => transactions
     .filter(t => t.type === 'deposit')
@@ -608,16 +633,16 @@ export default function App() {
               <div className="card summary-card">
                 <span className="summary-label">
                   <ArrowUpCircle size={16} style={{ marginRight: '0.25rem', verticalAlign: 'middle', color: 'var(--income-color)' }} />
-                  Total Pemasukan
+                  Masuk (Siklus Tgl {profile?.payday_date || 1})
                 </span>
-                <span className="summary-value income">{formatIDR(totalIncome)}</span>
+                <span className="summary-value income">{formatIDR(paydayIncome)}</span>
               </div>
               <div className="card summary-card">
                 <span className="summary-label">
                   <ArrowDownCircle size={16} style={{ marginRight: '0.25rem', verticalAlign: 'middle', color: 'var(--expense-color)' }} />
-                  Total Pengeluaran
+                  Keluar (Siklus Tgl {profile?.payday_date || 1})
                 </span>
-                <span className="summary-value expense">{formatIDR(totalExpense)}</span>
+                <span className="summary-value expense">{formatIDR(paydayExpense)}</span>
               </div>
               <div className="card summary-card">
                 <span className="summary-label">
@@ -628,7 +653,7 @@ export default function App() {
               </div>
             </div>
 
-            <DashboardCharts transactions={transactions} />
+            <DashboardCharts transactions={transactions} paydayDate={profile?.payday_date || 1} />
             <div style={{ marginTop: '1.5rem' }}>
               <WalletManager 
                 wallets={walletsWithUpdatedBalances} 
