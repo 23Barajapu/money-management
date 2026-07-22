@@ -139,6 +139,7 @@ h1 span {
 /* Forms */
 .form-group {
   margin-bottom: 1.25rem;
+  min-width: 0;
 }
 
 label {
@@ -723,7 +724,7 @@ input:focus, select:focus, textarea:focus {
 /* Mobile Responsive Grid Forms */
 @media (max-width: 768px) {
   .reminder-grid-form {
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   }
   .reminder-grid-form button {
     grid-column: span 2;
