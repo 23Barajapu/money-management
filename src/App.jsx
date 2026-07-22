@@ -774,6 +774,7 @@ export default function App() {
               cashBalance={cashBalance} 
               cashlessBalance={cashlessBalance} 
               formatIDR={formatIDR} 
+              showToast={showToast}
             />
           </div>
         )}
