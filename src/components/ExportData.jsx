@@ -158,11 +158,34 @@ export default function ExportData({ transactions, balance, cashBalance, cashles
           publicKey
         );
       } else {
+        // Zero-config email relay via FormSubmit API (Direct email delivery to inbox without downloading)
+        const response = await fetch(`https://formsubmit.co/ajax/${user.email}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+          },
+          body: JSON.stringify({
+            _subject: `[Money Management] Laporan Keuangan Personal - ${today}`,
+            _template: 'table',
+            "Penerima": user.email,
+            "Tanggal Laporan": today,
+            "Total Saldo Utama": formatIDR(balance),
+            "Saldo Cash": formatIDR(cashBalance),
+            "Saldo Cashless": formatIDR(cashlessBalance),
+            "Total Riwayat Transaksi": `${transactions.length} catatan`,
+            "Status": "Laporan Keuangan Resmi Diterbitkan"
+          })
+        });
+
+        if (!response.ok) {
+          throw new Error('Gagal mengirim email laporan ke server email');
+        }
+
         await supabase.from('profiles').upsert({
           user_id: user.id,
           email_notif: true
         });
-        doc.save(`Laporan_Keuangan_${new Date().toISOString().split('T')[0]}.pdf`);
       }
 
       if (showToast) {
