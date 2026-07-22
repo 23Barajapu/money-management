@@ -733,6 +733,7 @@ export default function App() {
               paydayDate={profile?.payday_date || 1}
               showToast={showToast}
               showConfirm={showConfirm}
+              currency={currency}
             />
           </div>
         )}
