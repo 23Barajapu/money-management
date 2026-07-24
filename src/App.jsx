@@ -12,7 +12,8 @@ import {
   CreditCard,
   Calendar,
   TrendingUp,
-  User
+  User,
+  UserX
 } from 'lucide-react';
 import { supabase } from './supabaseClient';
 import TransactionForm from './components/TransactionForm';
@@ -404,6 +405,38 @@ export default function App() {
     );
   };
 
+  const deleteAccount = async () => {
+    showConfirm(
+      'Hapus Akun Permanen',
+      'Apakah Anda yakin ingin menghapus akun dan SELURUH data Anda secara permanen? Tindakan ini tidak dapat dibatalkan.',
+      async () => {
+        try {
+          const userId = session?.user?.id;
+          if (userId) {
+            await supabase.from('transactions').delete().eq('user_id', userId);
+            await supabase.from('savings_goals').delete().eq('user_id', userId);
+            await supabase.from('installments').delete().eq('user_id', userId);
+            await supabase.from('wallets').delete().eq('user_id', userId);
+            await supabase.from('budgets').delete().eq('user_id', userId);
+            await supabase.from('bills').delete().eq('user_id', userId);
+            await supabase.from('recurring_transactions').delete().eq('user_id', userId);
+            await supabase.from('profiles').delete().eq('id', userId);
+            try {
+              await supabase.rpc('delete_user');
+            } catch (e) {
+              // Ignore if custom RPC delete_user is not installed
+            }
+          }
+          await supabase.auth.signOut();
+          showToast('Akun dan seluruh data Anda telah berhasil dihapus.', 'info');
+        } catch (err) {
+          showToast('Gagal menghapus akun: ' + err.message, 'error');
+        }
+      },
+      true
+    );
+  };
+
   const handleLogout = async () => {
     await supabase.auth.signOut();
   };
@@ -588,6 +621,14 @@ export default function App() {
               >
                 <RefreshCw size={14} />
                 <span>Reset Data</span>
+              </button>
+
+              <button 
+                onClick={() => { setShowProfileMenu(false); deleteAccount(); }} 
+                className="profile-action-btn delete"
+              >
+                <UserX size={14} />
+                <span>Hapus Akun</span>
               </button>
 
               <button 

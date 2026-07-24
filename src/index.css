@@ -836,11 +836,13 @@ input:focus, select:focus, textarea:focus {
   background: rgba(255, 255, 255, 0.05);
 }
 
-.profile-action-btn.reset {
+.profile-action-btn.reset,
+.profile-action-btn.delete {
   color: var(--expense-color);
 }
-.profile-action-btn.reset:hover {
-  background: rgba(239, 68, 68, 0.1);
+.profile-action-btn.reset:hover,
+.profile-action-btn.delete:hover {
+  background: rgba(239, 68, 68, 0.15);
 }
 
 .profile-action-btn.logout:hover {
