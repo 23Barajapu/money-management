@@ -413,6 +413,7 @@ export default function App() {
         try {
           const userId = session?.user?.id;
           if (userId) {
+            // Delete user data from public tables first
             await supabase.from('transactions').delete().eq('user_id', userId);
             await supabase.from('savings_goals').delete().eq('user_id', userId);
             await supabase.from('installments').delete().eq('user_id', userId);
@@ -421,10 +422,11 @@ export default function App() {
             await supabase.from('bills').delete().eq('user_id', userId);
             await supabase.from('recurring_transactions').delete().eq('user_id', userId);
             await supabase.from('profiles').delete().eq('id', userId);
-            try {
+            
+            // Delete user credentials from auth.users via RPC
+            const { error: rpcError } = await supabase.rpc('delete_user_account');
+            if (rpcError) {
               await supabase.rpc('delete_user');
-            } catch (e) {
-              // Ignore if custom RPC delete_user is not installed
             }
           }
           await supabase.auth.signOut();
