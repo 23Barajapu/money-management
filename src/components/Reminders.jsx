@@ -172,6 +172,19 @@ export default function Reminders({ onAddTransaction, formatIDR, wallets = [], i
     }
   };
 
+  const advanceMonth = (dateStr) => {
+    if (!dateStr) return new Date().toISOString().split('T')[0];
+    const [year, month, day] = dateStr.split('-').map(Number);
+    const targetDate = new Date(year, month - 1 + 1, day);
+    if (targetDate.getDate() !== day) {
+      targetDate.setDate(0);
+    }
+    const y = targetDate.getFullYear();
+    const m = String(targetDate.getMonth() + 1).padStart(2, '0');
+    const d = String(targetDate.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  };
+
   const handlePayBill = async (bill) => {
     if (bill.is_paid) return;
     const walletId = selectedBillWallet[bill.id] || (wallets[0]?.id || 'wallet_cash');
@@ -187,7 +200,13 @@ export default function Reminders({ onAddTransaction, formatIDR, wallets = [], i
         const user = (await supabase.auth.getUser()).data.user;
         if (!user) return;
 
-        const { error } = await supabase.from('bills').update({ is_paid: true }).eq('id', bill.id);
+        const nextDueDate = advanceMonth(bill.due_date);
+
+        // Advance due_date to next month & keep ready as unpaid for next cycle
+        const { error } = await supabase
+          .from('bills')
+          .update({ due_date: nextDueDate, is_paid: false })
+          .eq('id', bill.id);
         if (error) throw error;
 
         const newTx = {
@@ -201,7 +220,7 @@ export default function Reminders({ onAddTransaction, formatIDR, wallets = [], i
           payment_method: walletId
         };
         await onAddTransaction(newTx);
-        if (showToast) showToast(`Tagihan ${bill.name} berhasil dibayar!`, 'success');
+        if (showToast) showToast(`Tagihan ${bill.name} berhasil dibayar! Tempo berikutnya: ${nextDueDate}`, 'success');
         fetchData();
       } catch (error) {
         if (showToast) showToast(error.message, 'error');
@@ -240,11 +259,12 @@ export default function Reminders({ onAddTransaction, formatIDR, wallets = [], i
       return;
     }
 
-    // Sync matching manual bill if any exists
-    const matchingBill = bills.find(b => b.name.toLowerCase().trim() === inst.name.toLowerCase().trim() && !b.is_paid);
+    // Sync matching manual bill if any exists - advance due date to next month
+    const matchingBill = bills.find(b => b.name.toLowerCase().trim() === inst.name.toLowerCase().trim());
     if (matchingBill) {
       try {
-        await supabase.from('bills').update({ is_paid: true }).eq('id', matchingBill.id);
+        const nextDueDate = advanceMonth(matchingBill.due_date);
+        await supabase.from('bills').update({ due_date: nextDueDate, is_paid: false }).eq('id', matchingBill.id);
       } catch (e) {
         console.error('Error syncing bill payment:', e);
       }
