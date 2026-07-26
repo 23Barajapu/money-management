@@ -4,7 +4,6 @@ import { useCurrencyInput } from '../hooks/useCurrencyInput';
 
 export default function InstallmentTracker({ 
   installments = [], 
-  onAddInstallment, 
   onDeleteInstallment, 
   onPayInstallment, 
   balance, 
@@ -12,41 +11,8 @@ export default function InstallmentTracker({
   showToast,
   currency = 'IDR'
 }) {
-  const [name, setName] = useState('');
-  const [months, setMonths] = useState('');
-  const [showAddForm, setShowAddForm] = useState(false);
   const [customPayAmount, setCustomPayAmount] = useState({});
   const [selectedWallet, setSelectedWallet] = useState({});
-
-  const { 
-    displayValue: monthlyPaymentDisplay, 
-    rawValue: monthlyPaymentRaw, 
-    handleChange: handleMonthlyPaymentChange, 
-    handleBlur: handleMonthlyPaymentBlur, 
-    reset: resetMonthlyPayment 
-  } = useCurrencyInput(currency);
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    const rawVal = parseFloat(monthlyPaymentRaw);
-    const m = parseInt(months);
-    if (!name || isNaN(rawVal) || rawVal <= 0 || isNaN(m) || m <= 0) return;
-
-    const calculatedTotal = rawVal * m;
-
-    onAddInstallment({
-      id: Date.now().toString(),
-      name,
-      totalAmount: calculatedTotal,
-      paidAmount: 0,
-      monthlyPayment: rawVal,
-    });
-
-    setName('');
-    setMonths('');
-    resetMonthlyPayment();
-    setShowAddForm(false);
-  };
 
   const handlePay = (inst, amount) => {
     const payVal = parseFloat(amount);
@@ -78,8 +44,6 @@ export default function InstallmentTracker({
     return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(n);
   };
 
-  const currencyLabel = currency === 'IDR' ? 'Rp' : currency;
-
   return (
     <div className="card">
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem' }}>
@@ -87,56 +51,7 @@ export default function InstallmentTracker({
           <CreditCard size={20} className="expense" style={{ color: 'var(--expense-color)' }} />
           Daftar Cicilan
         </h2>
-        <button 
-          onClick={() => setShowAddForm(!showAddForm)}
-          className="btn-filter"
-          style={{ padding: '0.25rem 0.5rem' }}
-        >
-          {showAddForm ? 'Batal' : 'Tambah'}
-        </button>
       </div>
-
-      {showAddForm && (
-        <form onSubmit={handleSubmit} style={{ marginBottom: '1.5rem', paddingBottom: '1.5rem', borderBottom: '1px solid var(--border-color)' }}>
-          <div className="form-group">
-            <label>Nama Cicilan</label>
-            <input
-              type="text"
-              placeholder="e.g. Motor, HP, KPR"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              required
-            />
-          </div>
-          <div className="form-group">
-            <label>Cicilan per Bulan ({currencyLabel})</label>
-            <input
-              type="text"
-              inputMode="numeric"
-              placeholder={currency === 'IDR' ? 'e.g. 500.000' : 'e.g. 500.00'}
-              value={monthlyPaymentDisplay}
-              onChange={handleMonthlyPaymentChange}
-              onBlur={handleMonthlyPaymentBlur}
-              required
-            />
-          </div>
-          <div className="form-group">
-            <label>Lama Cicilan (Bulan)</label>
-            <input
-              type="number"
-              placeholder="e.g. 12"
-              value={months}
-              onChange={(e) => setMonths(e.target.value)}
-              required
-              min="1"
-            />
-          </div>
-          <button type="submit" className="btn-submit" style={{ background: 'var(--expense-color)' }}>
-            <Plus size={18} />
-            Simpan Cicilan
-          </button>
-        </form>
-      )}
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
         {installments.length === 0 ? (

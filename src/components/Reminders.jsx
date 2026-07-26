@@ -3,7 +3,7 @@ import { supabase } from '../supabaseClient';
 import { Calendar, Bell, Plus, Trash2, CheckCircle2, Clock, Play, Wallet, CreditCard } from 'lucide-react';
 import { useCurrencyInput } from '../hooks/useCurrencyInput';
 
-export default function Reminders({ onAddTransaction, formatIDR, wallets = [], installments = [], onPayInstallment, showToast, showConfirm, currency = 'IDR' }) {
+export default function Reminders({ onAddTransaction, formatIDR, wallets = [], installments = [], onPayInstallment, onAddInstallment, showToast, showConfirm, currency = 'IDR' }) {
   const [recurrings, setRecurrings] = useState([]);
   const [bills, setBills] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -16,9 +16,11 @@ export default function Reminders({ onAddTransaction, formatIDR, wallets = [], i
   const [recInterval, setRecInterval] = useState('monthly');
   const { displayValue: recAmountDisplay, rawValue: recAmountRaw, handleChange: handleRecAmountChange, handleBlur: handleRecAmountBlur, reset: resetRecAmount } = useCurrencyInput(currency);
 
-  // Form states - Bills
+  // Form states - Bills & Installments Unified Form
+  const [itemType, setItemType] = useState('bill'); // 'bill' or 'installment'
   const [billName, setBillName] = useState('');
   const [billDueDate, setBillDueDate] = useState('');
+  const [billMonths, setBillMonths] = useState('12');
   const { displayValue: billAmountDisplay, rawValue: billAmountRaw, handleChange: handleBillAmountChange, handleBlur: handleBillAmountBlur, reset: resetBillAmount } = useCurrencyInput(currency);
   
   // Selected wallet state for paying bills & paying installments from reminder
@@ -145,33 +147,53 @@ export default function Reminders({ onAddTransaction, formatIDR, wallets = [], i
     }
   };
 
-  const handleAddBill = async (e) => {
+  const handleAddBillOrInstallment = async (e) => {
     e.preventDefault();
     const rawVal = parseFloat(billAmountRaw);
-    if (!billName || isNaN(rawVal) || rawVal <= 0 || !billDueDate) return;
-    try {
-      const user = (await supabase.auth.getUser()).data.user;
-      if (!user) return;
+    if (!billName || isNaN(rawVal) || rawVal <= 0) return;
 
-      const newBill = {
-        id: Date.now().toString(),
-        user_id: user.id,
-        name: billName,
-        amount: rawVal,
-        due_date: billDueDate,
-        is_paid: false
-      };
-
-      const { error } = await supabase.from('bills').insert(newBill);
-      if (error) throw error;
-
+    if (itemType === 'installment') {
+      const months = parseInt(billMonths) || 12;
+      const totalAmount = rawVal * months;
+      if (onAddInstallment) {
+        await onAddInstallment({
+          id: Date.now().toString(),
+          name: billName,
+          totalAmount,
+          paidAmount: 0,
+          monthlyPayment: rawVal,
+        });
+      }
       setBillName('');
       resetBillAmount();
-      setBillDueDate('');
-      if (showToast) showToast('Pengingat tagihan berhasil disimpan!', 'success');
-      fetchData();
-    } catch (error) {
-      if (showToast) showToast(error.message, 'error');
+      setBillMonths('12');
+      if (showToast) showToast(`Cicilan "${billName}" berhasil ditambahkan!`, 'success');
+    } else {
+      if (!billDueDate) return;
+      try {
+        const user = (await supabase.auth.getUser()).data.user;
+        if (!user) return;
+
+        const newBill = {
+          id: Date.now().toString(),
+          user_id: user.id,
+          name: billName,
+          amount: rawVal,
+          due_date: billDueDate,
+          is_paid: false
+        };
+
+        const { error } = await supabase.from('bills').insert(newBill);
+        if (error) throw error;
+
+        setBillName('');
+        resetBillAmount();
+        setBillDueDate('');
+        if (showToast) showToast('Pengingat tagihan berhasil disimpan!', 'success');
+        fetchData();
+      } catch (error) {
+        if (showToast) showToast(error.message, 'error');
+      }
     }
   };
 
@@ -365,21 +387,35 @@ export default function Reminders({ onAddTransaction, formatIDR, wallets = [], i
           Pengingat Tagihan & Cicilan Aktif
         </h2>
 
-        <form onSubmit={handleAddBill} className="bill-grid-form" style={{ marginBottom: '1.5rem' }}>
+        <form onSubmit={handleAddBillOrInstallment} className="bill-grid-form" style={{ marginBottom: '1.5rem' }}>
           <div className="form-group" style={{ marginBottom: 0 }}>
-            <label>Nama Tagihan</label>
-            <input type="text" placeholder="e.g. Listrik, Wifi" value={billName} onChange={(e) => setBillName(e.target.value)} required />
+            <label>Kategori</label>
+            <select value={itemType} onChange={(e) => setItemType(e.target.value)} className="currency-select" style={{ padding: '0.55rem 0.5rem', fontSize: '0.85rem' }}>
+              <option value="bill">Tagihan Rutin</option>
+              <option value="installment">Cicilan Bulanan</option>
+            </select>
           </div>
           <div className="form-group" style={{ marginBottom: 0 }}>
-            <label>Jumlah Tagihan ({currency === 'IDR' ? 'Rp' : currency})</label>
+            <label>{itemType === 'installment' ? 'Nama Cicilan' : 'Nama Tagihan'}</label>
+            <input type="text" placeholder={itemType === 'installment' ? "e.g. Motor, HP, KPR" : "e.g. Listrik, Wifi"} value={billName} onChange={(e) => setBillName(e.target.value)} required />
+          </div>
+          <div className="form-group" style={{ marginBottom: 0 }}>
+            <label>{itemType === 'installment' ? 'Cicilan / Bulan' : 'Jumlah Tagihan'} ({currency === 'IDR' ? 'Rp' : currency})</label>
             <input type="text" inputMode="numeric" placeholder="Nominal" value={billAmountDisplay} onChange={handleBillAmountChange} onBlur={handleBillAmountBlur} required />
           </div>
-          <div className="form-group" style={{ marginBottom: 0 }}>
-            <label>Jatuh Tempo</label>
-            <input type="date" value={billDueDate} onChange={(e) => setBillDueDate(e.target.value)} required />
-          </div>
-          <button type="submit" className="btn-submit" style={{ padding: '0.75rem 1rem', width: 'auto' }}>
-            <Plus size={16} /> Tagihan
+          {itemType === 'installment' ? (
+            <div className="form-group" style={{ marginBottom: 0 }}>
+              <label>Lama (Bulan)</label>
+              <input type="number" min="1" placeholder="e.g. 12" value={billMonths} onChange={(e) => setBillMonths(e.target.value)} required />
+            </div>
+          ) : (
+            <div className="form-group" style={{ marginBottom: 0 }}>
+              <label>Jatuh Tempo</label>
+              <input type="date" value={billDueDate} onChange={(e) => setBillDueDate(e.target.value)} required />
+            </div>
+          )}
+          <button type="submit" className="btn-submit" style={{ padding: '0.75rem 1rem', width: 'auto', background: itemType === 'installment' ? 'var(--expense-color)' : 'var(--accent-color)' }}>
+            <Plus size={16} /> {itemType === 'installment' ? 'Cicilan' : 'Tagihan'}
           </button>
         </form>
 

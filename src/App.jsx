@@ -801,6 +801,7 @@ export default function App() {
               wallets={walletsWithUpdatedBalances}
               installments={installments}
               onPayInstallment={handlePayInstallment}
+              onAddInstallment={handleAddInstallment}
               showToast={showToast}
               showConfirm={showConfirm}
               currency={currency}
