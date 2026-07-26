@@ -1,31 +1,50 @@
 import React, { useState } from 'react';
 import { CreditCard, Plus, Trash2, CheckCircle, Wallet } from 'lucide-react';
+import { useCurrencyInput } from '../hooks/useCurrencyInput';
 
-export default function InstallmentTracker({ installments, onAddInstallment, onDeleteInstallment, onPayInstallment, balance, wallets = [], showToast }) {
+export default function InstallmentTracker({ 
+  installments = [], 
+  onAddInstallment, 
+  onDeleteInstallment, 
+  onPayInstallment, 
+  balance, 
+  wallets = [], 
+  showToast,
+  currency = 'IDR'
+}) {
   const [name, setName] = useState('');
   const [months, setMonths] = useState('');
-  const [monthlyPayment, setMonthlyPayment] = useState('');
   const [showAddForm, setShowAddForm] = useState(false);
   const [customPayAmount, setCustomPayAmount] = useState({});
   const [selectedWallet, setSelectedWallet] = useState({});
 
+  const { 
+    displayValue: monthlyPaymentDisplay, 
+    rawValue: monthlyPaymentRaw, 
+    handleChange: handleMonthlyPaymentChange, 
+    handleBlur: handleMonthlyPaymentBlur, 
+    reset: resetMonthlyPayment 
+  } = useCurrencyInput(currency);
+
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (!name || !months || !monthlyPayment) return;
+    const rawVal = parseFloat(monthlyPaymentRaw);
+    const m = parseInt(months);
+    if (!name || isNaN(rawVal) || rawVal <= 0 || isNaN(m) || m <= 0) return;
 
-    const calculatedTotal = parseFloat(monthlyPayment) * parseInt(months);
+    const calculatedTotal = rawVal * m;
 
     onAddInstallment({
       id: Date.now().toString(),
       name,
       totalAmount: calculatedTotal,
       paidAmount: 0,
-      monthlyPayment: parseFloat(monthlyPayment),
+      monthlyPayment: rawVal,
     });
 
     setName('');
     setMonths('');
-    setMonthlyPayment('');
+    resetMonthlyPayment();
     setShowAddForm(false);
   };
 
@@ -41,7 +60,10 @@ export default function InstallmentTracker({ installments, onAddInstallment, onD
       return;
     }
 
-    const remaining = inst.totalAmount - inst.paidAmount;
+    const total = Number(inst.totalAmount) || 0;
+    const paid = Number(inst.paidAmount) || 0;
+    const remaining = total - paid;
+
     if (payVal > remaining) {
       if (showToast) showToast('Jumlah pembayaran melebihi sisa cicilan!', 'error');
       return;
@@ -52,8 +74,11 @@ export default function InstallmentTracker({ installments, onAddInstallment, onD
   };
 
   const formatIDR = (num) => {
-    return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(num);
+    const n = Number(num) || 0;
+    return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(n);
   };
+
+  const currencyLabel = currency === 'IDR' ? 'Rp' : currency;
 
   return (
     <div className="card">
@@ -84,14 +109,15 @@ export default function InstallmentTracker({ installments, onAddInstallment, onD
             />
           </div>
           <div className="form-group">
-            <label>Cicilan per Bulan (Rp)</label>
+            <label>Cicilan per Bulan ({currencyLabel})</label>
             <input
-              type="number"
-              placeholder="e.g. 500000"
-              value={monthlyPayment}
-              onChange={(e) => setMonthlyPayment(e.target.value)}
+              type="text"
+              inputMode="numeric"
+              placeholder={currency === 'IDR' ? 'e.g. 500.000' : 'e.g. 500.00'}
+              value={monthlyPaymentDisplay}
+              onChange={handleMonthlyPaymentChange}
+              onBlur={handleMonthlyPaymentBlur}
               required
-              min="1"
             />
           </div>
           <div className="form-group">
@@ -117,8 +143,11 @@ export default function InstallmentTracker({ installments, onAddInstallment, onD
           <div className="empty-state" style={{ padding: '1rem 0' }}>Belum ada cicilan terdaftar.</div>
         ) : (
           installments.map(inst => {
-            const remaining = inst.totalAmount - inst.paidAmount;
-            const progress = Math.min(Math.round((inst.paidAmount / inst.totalAmount) * 100), 100);
+            const total = Number(inst.totalAmount) || 0;
+            const paid = Number(inst.paidAmount) || 0;
+            const monthly = Number(inst.monthlyPayment) || 0;
+            const remaining = Math.max(0, total - paid);
+            const progress = total > 0 ? Math.min(Math.round((paid / total) * 100), 100) : 0;
             const isSettled = remaining <= 0;
             const currentWalletId = selectedWallet[inst.id] || (wallets[0]?.id || 'wallet_cash');
 
@@ -131,7 +160,7 @@ export default function InstallmentTracker({ installments, onAddInstallment, onD
                       {isSettled && <span style={{ color: 'var(--income-color)', fontSize: '0.75rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.1rem' }}><CheckCircle size={12}/> Lunas</span>}
                     </div>
                     <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-                      Cicilan: {formatIDR(inst.monthlyPayment)} / bulan
+                      Cicilan: {formatIDR(monthly)} / bulan
                     </span>
                   </div>
                   <button 
@@ -156,7 +185,7 @@ export default function InstallmentTracker({ installments, onAddInstallment, onD
 
                 <div className="savings-stats" style={{ fontSize: '0.75rem', marginBottom: '0.75rem' }}>
                   <span>Sisa: <strong>{formatIDR(remaining)}</strong></span>
-                  <span>Total: {formatIDR(inst.totalAmount)}</span>
+                  <span>Total: {formatIDR(total)}</span>
                 </div>
 
                 {!isSettled && (
@@ -192,25 +221,24 @@ export default function InstallmentTracker({ installments, onAddInstallment, onD
                         placeholder="Bayar kustom..."
                         value={customPayAmount[inst.id] || ''}
                         onChange={(e) => setCustomPayAmount(prev => ({ ...prev, [inst.id]: e.target.value }))}
-                        style={{ padding: '0.4rem 0.75rem', fontSize: '0.85rem' }}
+                        style={{ padding: '0.4rem 0.6rem', fontSize: '0.85rem' }}
                       />
-                      <button
+                      <button 
                         onClick={() => handlePay(inst, customPayAmount[inst.id])}
                         className="btn-filter active"
-                        style={{ whiteSpace: 'nowrap', padding: '0.4rem 0.75rem', fontSize: '0.85rem' }}
+                        style={{ padding: '0.4rem 0.75rem', fontSize: '0.8rem', whiteSpace: 'nowrap' }}
                       >
                         Bayar Kustom
                       </button>
                     </div>
-                    {remaining >= inst.monthlyPayment && (
-                      <button
-                        onClick={() => handlePay(inst, inst.monthlyPayment)}
-                        className="btn-submit"
-                        style={{ fontSize: '0.85rem', padding: '0.5rem', background: 'rgba(239, 68, 68, 0.15)', color: 'var(--expense-color)', border: '1px solid rgba(239,68,68,0.2)' }}
-                      >
-                        Bayar Cicilan Bulanan ({formatIDR(inst.monthlyPayment)})
-                      </button>
-                    )}
+
+                    <button 
+                      onClick={() => handlePay(inst, monthly)}
+                      className="btn-submit"
+                      style={{ padding: '0.5rem', fontSize: '0.85rem', width: '100%', background: 'var(--expense-color)' }}
+                    >
+                      Bayar Cicilan Bulanan ({formatIDR(monthly)})
+                    </button>
                   </div>
                 )}
               </div>

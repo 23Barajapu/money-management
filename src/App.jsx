@@ -313,19 +313,30 @@ export default function App() {
 
   const handleAddInstallment = async (newInst) => {
     const userId = session.user.id;
+    const total = Number(newInst.totalAmount) || 0;
+    const paid = Number(newInst.paidAmount) || 0;
+    const monthly = Number(newInst.monthlyPayment) || 0;
+
+    const sanitizedInst = {
+      ...newInst,
+      totalAmount: total,
+      paidAmount: paid,
+      monthlyPayment: monthly
+    };
+
     try {
       const { error } = await supabase
         .from('installments')
         .insert({
-          id: newInst.id,
+          id: sanitizedInst.id,
           user_id: userId,
-          name: newInst.name,
-          total_amount: newInst.totalAmount,
-          paid_amount: newInst.paidAmount,
-          monthly_payment: newInst.monthlyPayment
+          name: sanitizedInst.name,
+          total_amount: total,
+          paid_amount: paid,
+          monthly_payment: monthly
         });
       if (error) throw error;
-      setInstallments(prev => [...prev, newInst]);
+      setInstallments(prev => [...prev, sanitizedInst]);
       showToast('Cicilan berhasil ditambahkan!', 'success');
     } catch (err) {
       showToast('Gagal menambahkan cicilan: ' + err.message, 'error');
@@ -801,6 +812,7 @@ export default function App() {
               balance={balance}
               wallets={walletsWithUpdatedBalances}
               showToast={showToast}
+              currency={currency}
             />
           </div>
         )}
