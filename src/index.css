@@ -731,10 +731,16 @@ input:focus, select:focus, textarea:focus {
 
 .bill-grid-form {
   display: grid;
-  grid-template-columns: 1.5fr 1fr 1fr auto;
+  grid-template-columns: 1.2fr 1.5fr 1.2fr 1fr auto;
   gap: 0.75rem;
   margin-bottom: 1.5rem;
   align-items: end;
+}
+
+.bill-grid-form input,
+.bill-grid-form select {
+  min-width: 0;
+  width: 100%;
 }
 
 .budget-grid-form {
