@@ -230,7 +230,7 @@ export default function Reminders({ onAddTransaction, formatIDR, wallets = [], i
     }
   };
 
-  const handlePayInstallmentFromReminder = (inst) => {
+  const handlePayInstallmentFromReminder = async (inst) => {
     if (!onPayInstallment) return;
     const walletId = selectedInstWallet[inst.id] || (wallets[0]?.id || 'wallet_cash');
     const chosenWallet = wallets.find(w => w.id === walletId);
@@ -240,10 +240,25 @@ export default function Reminders({ onAddTransaction, formatIDR, wallets = [], i
       return;
     }
 
-    onPayInstallment(inst.id, inst.monthlyPayment, walletId);
+    // Sync matching manual bill if any exists
+    const matchingBill = bills.find(b => b.name.toLowerCase().trim() === inst.name.toLowerCase().trim() && !b.is_paid);
+    if (matchingBill) {
+      try {
+        await supabase.from('bills').update({ is_paid: true }).eq('id', matchingBill.id);
+      } catch (e) {
+        console.error('Error syncing bill payment:', e);
+      }
+    }
+
+    await onPayInstallment(inst.id, inst.monthlyPayment, walletId);
+    fetchData();
   };
 
   const activeInstallments = installments.filter(inst => (inst.totalAmount - inst.paidAmount) > 0);
+  const activeInstNames = activeInstallments.map(inst => inst.name.toLowerCase().trim());
+  
+  // Filter out duplicate manual bills that match active installment names
+  const displayBills = bills.filter(b => !activeInstNames.includes(b.name.toLowerCase().trim()));
 
   return (
     <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '1.5rem' }}>
@@ -353,10 +368,10 @@ export default function Reminders({ onAddTransaction, formatIDR, wallets = [], i
               Daftar Tagihan Rutin
             </h4>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '0.75rem' }}>
-              {bills.length === 0 ? (
-                <div className="empty-state">Belum ada pengingat tagihan.</div>
+              {displayBills.length === 0 ? (
+                <div className="empty-state">Belum ada pengingat tagihan rutin (selain cicilan).</div>
               ) : (
-                bills.map(b => {
+                displayBills.map(b => {
                   const isOverdue = new Date(b.due_date) < new Date() && !b.is_paid;
                   const currentWId = selectedBillWallet[b.id] || (wallets[0]?.id || 'wallet_cash');
                   return (
