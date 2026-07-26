@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
 import { Calendar, Bell, Plus, Trash2, CheckCircle2, Clock, Play, Wallet, CreditCard } from 'lucide-react';
+import { useCurrencyInput } from '../hooks/useCurrencyInput';
 
-export default function Reminders({ onAddTransaction, formatIDR, wallets = [], installments = [], onPayInstallment, showToast, showConfirm }) {
+export default function Reminders({ onAddTransaction, formatIDR, wallets = [], installments = [], onPayInstallment, showToast, showConfirm, currency = 'IDR' }) {
   const [recurrings, setRecurrings] = useState([]);
   const [bills, setBills] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -10,15 +11,15 @@ export default function Reminders({ onAddTransaction, formatIDR, wallets = [], i
   // Form states - Recurring
   const [recType, setRecType] = useState('expense');
   const [recTitle, setRecTitle] = useState('');
-  const [recAmount, setRecAmount] = useState('');
   const [recCategory, setRecCategory] = useState('Lainnya');
   const [recMethod, setRecMethod] = useState('wallet_cash');
   const [recInterval, setRecInterval] = useState('monthly');
+  const { displayValue: recAmountDisplay, rawValue: recAmountRaw, handleChange: handleRecAmountChange, handleBlur: handleRecAmountBlur, reset: resetRecAmount } = useCurrencyInput(currency);
 
   // Form states - Bills
   const [billName, setBillName] = useState('');
-  const [billAmount, setBillAmount] = useState('');
   const [billDueDate, setBillDueDate] = useState('');
+  const { displayValue: billAmountDisplay, rawValue: billAmountRaw, handleChange: handleBillAmountChange, handleBlur: handleBillAmountBlur, reset: resetBillAmount } = useCurrencyInput(currency);
   
   // Selected wallet state for paying bills & paying installments from reminder
   const [selectedBillWallet, setSelectedBillWallet] = useState({});
@@ -103,7 +104,8 @@ export default function Reminders({ onAddTransaction, formatIDR, wallets = [], i
 
   const handleAddRecurring = async (e) => {
     e.preventDefault();
-    if (!recTitle || !recAmount) return;
+    const rawVal = parseFloat(recAmountRaw);
+    if (!recTitle || isNaN(rawVal) || rawVal <= 0) return;
     try {
       const user = (await supabase.auth.getUser()).data.user;
       if (!user) return;
@@ -113,7 +115,7 @@ export default function Reminders({ onAddTransaction, formatIDR, wallets = [], i
         user_id: user.id,
         type: recType,
         title: recTitle,
-        amount: parseFloat(recAmount),
+        amount: rawVal,
         category: recCategory,
         payment_method: recMethod || (wallets[0]?.id || 'wallet_cash'),
         interval: recInterval,
@@ -124,7 +126,7 @@ export default function Reminders({ onAddTransaction, formatIDR, wallets = [], i
       if (error) throw error;
 
       setRecTitle('');
-      setRecAmount('');
+      resetRecAmount();
       if (showToast) showToast('Transaksi berulang berhasil ditambahkan!', 'success');
       fetchData();
     } catch (error) {
@@ -145,7 +147,8 @@ export default function Reminders({ onAddTransaction, formatIDR, wallets = [], i
 
   const handleAddBill = async (e) => {
     e.preventDefault();
-    if (!billName || !billAmount || !billDueDate) return;
+    const rawVal = parseFloat(billAmountRaw);
+    if (!billName || isNaN(rawVal) || rawVal <= 0 || !billDueDate) return;
     try {
       const user = (await supabase.auth.getUser()).data.user;
       if (!user) return;
@@ -154,7 +157,7 @@ export default function Reminders({ onAddTransaction, formatIDR, wallets = [], i
         id: Date.now().toString(),
         user_id: user.id,
         name: billName,
-        amount: parseFloat(billAmount),
+        amount: rawVal,
         due_date: billDueDate,
         is_paid: false
       };
@@ -163,7 +166,7 @@ export default function Reminders({ onAddTransaction, formatIDR, wallets = [], i
       if (error) throw error;
 
       setBillName('');
-      setBillAmount('');
+      resetBillAmount();
       setBillDueDate('');
       if (showToast) showToast('Pengingat tagihan berhasil disimpan!', 'success');
       fetchData();
@@ -295,8 +298,8 @@ export default function Reminders({ onAddTransaction, formatIDR, wallets = [], i
             <input type="text" placeholder="e.g. Kosan, Netflix" value={recTitle} onChange={(e) => setRecTitle(e.target.value)} required />
           </div>
           <div className="form-group" style={{ marginBottom: 0 }}>
-            <label>Nominal</label>
-            <input type="number" placeholder="Nominal" value={recAmount} onChange={(e) => setRecAmount(e.target.value)} required />
+            <label>Nominal ({currency === 'IDR' ? 'Rp' : currency})</label>
+            <input type="text" inputMode="numeric" placeholder="Nominal" value={recAmountDisplay} onChange={handleRecAmountChange} onBlur={handleRecAmountBlur} required />
           </div>
           <div className="form-group" style={{ marginBottom: 0 }}>
             <label>Frekuensi</label>
@@ -368,8 +371,8 @@ export default function Reminders({ onAddTransaction, formatIDR, wallets = [], i
             <input type="text" placeholder="e.g. Listrik, Wifi" value={billName} onChange={(e) => setBillName(e.target.value)} required />
           </div>
           <div className="form-group" style={{ marginBottom: 0 }}>
-            <label>Jumlah Tagihan</label>
-            <input type="number" placeholder="Nominal" value={billAmount} onChange={(e) => setBillAmount(e.target.value)} required />
+            <label>Jumlah Tagihan ({currency === 'IDR' ? 'Rp' : currency})</label>
+            <input type="text" inputMode="numeric" placeholder="Nominal" value={billAmountDisplay} onChange={handleBillAmountChange} onBlur={handleBillAmountBlur} required />
           </div>
           <div className="form-group" style={{ marginBottom: 0 }}>
             <label>Jatuh Tempo</label>

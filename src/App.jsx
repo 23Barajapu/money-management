@@ -803,6 +803,7 @@ export default function App() {
               onPayInstallment={handlePayInstallment}
               showToast={showToast}
               showConfirm={showConfirm}
+              currency={currency}
             />
             <InstallmentTracker 
               installments={installments}
