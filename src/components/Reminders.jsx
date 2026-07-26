@@ -448,35 +448,55 @@ export default function Reminders({ onAddTransaction, formatIDR, wallets = [], i
               <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '0.75rem' }}>
                 {activeInstallments.map(inst => {
                   const remaining = inst.totalAmount - inst.paidAmount;
+                  const progress = Math.min(Math.round((inst.paidAmount / inst.totalAmount) * 100), 100);
                   const currentInstWId = selectedInstWallet[inst.id] || (wallets[0]?.id || 'wallet_cash');
                   return (
-                    <div key={inst.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(239, 68, 68, 0.02)', padding: '0.85rem 1rem', borderRadius: '0.75rem', border: '1px solid rgba(239, 68, 68, 0.2)' }}>
-                      <div>
-                        <h4 style={{ margin: 0, fontWeight: 600 }}>{inst.name}</h4>
-                        <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-                          Tagihan Bulan Ini: <strong>{formatIDR(inst.monthlyPayment)}</strong> (Sisa Total: {formatIDR(remaining)})
-                        </span>
+                    <div key={inst.id} style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', background: 'rgba(239, 68, 68, 0.02)', padding: '0.85rem 1rem', borderRadius: '0.75rem', border: '1px solid rgba(239, 68, 68, 0.2)' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div>
+                          <h4 style={{ margin: 0, fontWeight: 600 }}>{inst.name}</h4>
+                          <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                            Tagihan Bulan Ini: <strong>{formatIDR(inst.monthlyPayment)}</strong> (Sisa: {formatIDR(remaining)})
+                          </span>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                          <select
+                            value={currentInstWId}
+                            onChange={(e) => setSelectedInstWallet(prev => ({ ...prev, [inst.id]: e.target.value }))}
+                            className="currency-select"
+                            style={{ padding: '0.3rem 0.5rem', fontSize: '0.75rem' }}
+                          >
+                            {wallets.map(w => (
+                              <option key={w.id} value={w.id}>
+                                {w.name} ({formatIDR(w.balance)})
+                              </option>
+                            ))}
+                          </select>
+                          <button 
+                            onClick={() => handlePayInstallmentFromReminder(inst)}
+                            className="btn-submit" 
+                            style={{ padding: '0.4rem 0.75rem', fontSize: '0.8rem', width: 'auto', background: 'var(--expense-color)' }}
+                          >
+                            Bayar Cicilan
+                          </button>
+                        </div>
                       </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                        <select
-                          value={currentInstWId}
-                          onChange={(e) => setSelectedInstWallet(prev => ({ ...prev, [inst.id]: e.target.value }))}
-                          className="currency-select"
-                          style={{ padding: '0.3rem 0.5rem', fontSize: '0.75rem' }}
-                        >
-                          {wallets.map(w => (
-                            <option key={w.id} value={w.id}>
-                              {w.name} ({formatIDR(w.balance)})
-                            </option>
-                          ))}
-                        </select>
-                        <button 
-                          onClick={() => handlePayInstallmentFromReminder(inst)}
-                          className="btn-submit" 
-                          style={{ padding: '0.4rem 0.75rem', fontSize: '0.8rem', width: 'auto', background: 'var(--expense-color)' }}
-                        >
-                          Bayar Cicilan
-                        </button>
+
+                      {/* Mini Progress Bar Integrasi */}
+                      <div style={{ width: '100%', paddingTop: '0.25rem' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.7rem', color: 'var(--text-secondary)', marginBottom: '0.2rem' }}>
+                          <span>Progres Pembayaran: <strong>{progress}%</strong></span>
+                          <span>{formatIDR(inst.paidAmount)} / {formatIDR(inst.totalAmount)}</span>
+                        </div>
+                        <div className="progress-bar-container" style={{ margin: 0, height: '0.4rem' }}>
+                          <div 
+                            className="progress-bar" 
+                            style={{ 
+                              width: `${progress}%`,
+                              background: 'linear-gradient(90deg, var(--expense-color) 0%, var(--accent-color) 100%)' 
+                            }}
+                          ></div>
+                        </div>
                       </div>
                     </div>
                   );
