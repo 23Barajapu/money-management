@@ -746,18 +746,24 @@ export default function App() {
               {/* Card 2: Current Month Summary */}
               <div className="card" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
                 <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', fontWeight: 500 }}>{t('currentMonth')}</span>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.5rem', marginTop: '0.5rem' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(100px, 1fr))', gap: '0.75rem', marginTop: '0.5rem' }}>
                   <div>
-                    <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', display: 'block' }}>{t('income')}</span>
-                    <strong style={{ fontSize: '1rem', color: 'var(--income-color)' }}>{formatIDR(paydayIncome)}</strong>
+                    <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '0.15rem', fontWeight: 500 }}>{t('income')}</span>
+                    <strong style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--income-color)', display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {formatIDR(paydayIncome)}
+                    </strong>
                   </div>
                   <div>
-                    <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', display: 'block' }}>{t('expenses')}</span>
-                    <strong style={{ fontSize: '1rem', color: 'var(--expense-color)' }}>{formatIDR(paydayExpense)}</strong>
+                    <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '0.15rem', fontWeight: 500 }}>{t('expenses')}</span>
+                    <strong style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--expense-color)', display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {formatIDR(paydayExpense)}
+                    </strong>
                   </div>
                   <div>
-                    <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', display: 'block' }}>{t('saved')}</span>
-                    <strong style={{ fontSize: '1rem', color: 'var(--saving-color)' }}>{formatIDR(currentSaved)}</strong>
+                    <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '0.15rem', fontWeight: 500 }}>{t('saved')}</span>
+                    <strong style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--saving-color)', display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {formatIDR(currentSaved)}
+                    </strong>
                   </div>
                 </div>
               </div>

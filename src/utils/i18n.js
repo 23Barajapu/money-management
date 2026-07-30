@@ -11,7 +11,7 @@ export const translations = {
     dashboard: 'Dashboard',
     transactions: 'Transaksi',
     budgets: 'Budgets',
-    analytics: 'Analytics',
+    analytics: 'Analisis',
     reminders: 'Tagihan & Cicilan',
 
     // Dashboard Cards
@@ -22,7 +22,7 @@ export const translations = {
     expenses: 'Pengeluaran',
     saved: 'Ditabung',
     quickActions: 'Aksi Cepat',
-    addTx: 'Tambah Tx',
+    addTx: 'Tambah Transaksi',
     sendMoney: 'Transfer',
     payBills: 'Bayar Tagihan',
     cashWallet: 'Dompet Cash',
