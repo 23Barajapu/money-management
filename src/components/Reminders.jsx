@@ -434,43 +434,47 @@ export default function Reminders({ onAddTransaction, formatIDR, wallets = [], i
                   const isOverdue = new Date(b.due_date) < new Date() && !b.is_paid;
                   const currentWId = selectedBillWallet[b.id] || (wallets[0]?.id || 'wallet_cash');
                   return (
-                    <div key={b.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: b.is_paid ? 'rgba(16, 185, 129, 0.03)' : isOverdue ? 'rgba(239, 68, 68, 0.03)' : 'rgba(255,255,255,0.02)', padding: '0.85rem 1rem', borderRadius: '0.75rem', border: `1px solid ${b.is_paid ? 'var(--income-color)' : isOverdue ? 'var(--expense-color)' : 'var(--border-color)'}` }}>
-                      <div>
-                        <h4 style={{ margin: 0, fontWeight: 600, textDecoration: b.is_paid ? 'line-through' : 'none', color: b.is_paid ? 'var(--text-secondary)' : 'var(--text-primary)' }}>{b.name}</h4>
-                        <span style={{ fontSize: '0.8rem', color: isOverdue ? 'var(--expense-color)' : 'var(--text-secondary)' }}>
-                          Tempo: {b.due_date} {isOverdue && '(Terlewat)'}
-                        </span>
+                    <div key={b.id} style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem', background: b.is_paid ? 'rgba(16, 185, 129, 0.03)' : isOverdue ? 'rgba(239, 68, 68, 0.03)' : 'rgba(255,255,255,0.02)', padding: '0.85rem 1rem', borderRadius: '0.75rem', border: `1px solid ${b.is_paid ? 'var(--income-color)' : isOverdue ? 'var(--expense-color)' : 'var(--border-color)'}` }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                        <div>
+                          <h4 style={{ margin: 0, fontWeight: 600, fontSize: '0.95rem', textDecoration: b.is_paid ? 'line-through' : 'none', color: b.is_paid ? 'var(--text-secondary)' : 'var(--text-primary)' }}>{b.name}</h4>
+                          <span style={{ fontSize: '0.75rem', color: isOverdue ? 'var(--expense-color)' : 'var(--text-secondary)' }}>
+                            Tempo: {b.due_date} {isOverdue && '(Terlewat)'}
+                          </span>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                          <span style={{ fontWeight: 700, fontSize: '0.95rem', color: b.is_paid ? 'var(--income-color)' : 'var(--text-primary)' }}>{formatIDR(b.amount)}</span>
+                          <button onClick={() => handleDeleteBill(b.id)} className="btn-delete">
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
                       </div>
 
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                        <span style={{ fontWeight: 600, fontSize: '0.9rem' }}>{formatIDR(b.amount)}</span>
-                        {!b.is_paid ? (
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                            <select
-                              value={currentWId}
-                              onChange={(e) => setSelectedBillWallet(prev => ({ ...prev, [b.id]: e.target.value }))}
-                              className="currency-select"
-                              style={{ padding: '0.3rem 0.5rem', fontSize: '0.75rem' }}
-                            >
-                              {wallets.map(w => (
-                                <option key={w.id} value={w.id}>
-                                  {w.name} ({formatIDR(w.balance)})
-                                </option>
-                              ))}
-                            </select>
-                            <button onClick={() => handlePayBill(b)} className="btn-toggle active income" style={{ padding: '0.4rem 0.75rem', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                              <Clock size={12} /> Bayar
-                            </button>
-                          </div>
-                        ) : (
-                          <span style={{ color: 'var(--income-color)', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                      {!b.is_paid ? (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap', paddingTop: '0.4rem', borderTop: '1px solid rgba(255,255,255,0.04)' }}>
+                          <select
+                            value={currentWId}
+                            onChange={(e) => setSelectedBillWallet(prev => ({ ...prev, [b.id]: e.target.value }))}
+                            className="currency-select"
+                            style={{ flex: 1, minWidth: '140px', padding: '0.4rem 0.6rem', fontSize: '0.8rem' }}
+                          >
+                            {wallets.map(w => (
+                              <option key={w.id} value={w.id}>
+                                {w.name} ({formatIDR(w.balance)})
+                              </option>
+                            ))}
+                          </select>
+                          <button onClick={() => handlePayBill(b)} className="btn-toggle active income" style={{ padding: '0.4rem 1rem', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '0.35rem', whiteSpace: 'nowrap' }}>
+                            <Clock size={13} /> Bayar
+                          </button>
+                        </div>
+                      ) : (
+                        <div style={{ paddingTop: '0.2rem' }}>
+                          <span style={{ color: 'var(--income-color)', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '0.25rem', fontWeight: 600 }}>
                             <CheckCircle2 size={14} /> Lunas
                           </span>
-                        )}
-                        <button onClick={() => handleDeleteBill(b.id)} className="btn-delete">
-                          <Trash2 size={14} />
-                        </button>
-                      </div>
+                        </div>
+                      )}
                     </div>
                   );
                 })
@@ -490,52 +494,43 @@ export default function Reminders({ onAddTransaction, formatIDR, wallets = [], i
                   const progress = Math.min(Math.round((inst.paidAmount / inst.totalAmount) * 100), 100);
                   const currentInstWId = selectedInstWallet[inst.id] || (wallets[0]?.id || 'wallet_cash');
                   return (
-                    <div key={inst.id} style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', background: 'rgba(239, 68, 68, 0.02)', padding: '0.85rem 1rem', borderRadius: '0.75rem', border: '1px solid rgba(239, 68, 68, 0.2)' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div key={inst.id} style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem', background: 'rgba(239, 68, 68, 0.02)', padding: '0.85rem 1rem', borderRadius: '0.75rem', border: '1px solid rgba(239, 68, 68, 0.2)' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                         <div>
-                          <h4 style={{ margin: 0, fontWeight: 600 }}>{inst.name}</h4>
-                          <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-                            Tagihan Bulan Ini: <strong>{formatIDR(inst.monthlyPayment)}</strong> (Sisa: {formatIDR(remaining)})
+                          <h4 style={{ margin: 0, fontWeight: 600, fontSize: '0.95rem' }}>{inst.name}</h4>
+                          <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                            Tagihan Bulan Ini: <strong style={{ color: '#fff' }}>{formatIDR(inst.monthlyPayment)}</strong> (Sisa: {formatIDR(remaining)})
                           </span>
                         </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                          <select
-                            value={currentInstWId}
-                            onChange={(e) => setSelectedInstWallet(prev => ({ ...prev, [inst.id]: e.target.value }))}
-                            className="currency-select"
-                            style={{ padding: '0.3rem 0.5rem', fontSize: '0.75rem' }}
-                          >
-                            {wallets.map(w => (
-                              <option key={w.id} value={w.id}>
-                                {w.name} ({formatIDR(w.balance)})
-                              </option>
-                            ))}
-                          </select>
-                          <button 
-                            onClick={() => handlePayInstallmentFromReminder(inst)}
-                            className="btn-submit" 
-                            style={{ padding: '0.4rem 0.75rem', fontSize: '0.8rem', width: 'auto', background: 'var(--expense-color)' }}
-                          >
-                            Bayar Cicilan
-                          </button>
-                        </div>
+                        <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--expense-color)', background: 'rgba(239,68,68,0.1)', padding: '0.2rem 0.5rem', borderRadius: '4px' }}>
+                          {progress}%
+                        </span>
                       </div>
 
-                      {/* Mini Progress Bar Integrasi */}
-                      <div style={{ width: '100%', paddingTop: '0.25rem' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.7rem', color: 'var(--text-secondary)', marginBottom: '0.2rem' }}>
-                          <span>Progres Pembayaran: <strong>{progress}%</strong></span>
-                          <span>{formatIDR(inst.paidAmount)} / {formatIDR(inst.totalAmount)}</span>
-                        </div>
-                        <div className="progress-bar-container" style={{ margin: 0, height: '0.4rem' }}>
-                          <div 
-                            className="progress-bar" 
-                            style={{ 
-                              width: `${progress}%`,
-                              background: 'linear-gradient(90deg, var(--expense-color) 0%, var(--accent-color) 100%)' 
-                            }}
-                          ></div>
-                        </div>
+                      <div className="progress-bar-container" style={{ height: '0.35rem', margin: 0 }}>
+                        <div className="progress-bar" style={{ width: `${progress}%`, background: 'var(--expense-color)' }}></div>
+                      </div>
+
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap', paddingTop: '0.4rem', borderTop: '1px solid rgba(255,255,255,0.04)' }}>
+                        <select
+                          value={currentInstWId}
+                          onChange={(e) => setSelectedInstWallet(prev => ({ ...prev, [inst.id]: e.target.value }))}
+                          className="currency-select"
+                          style={{ flex: 1, minWidth: '140px', padding: '0.4rem 0.6rem', fontSize: '0.8rem' }}
+                        >
+                          {wallets.map(w => (
+                            <option key={w.id} value={w.id}>
+                              {w.name} ({formatIDR(w.balance)})
+                            </option>
+                          ))}
+                        </select>
+                        <button 
+                          onClick={() => handlePayInstallmentFromReminder(inst)}
+                          className="btn-submit" 
+                          style={{ padding: '0.4rem 1rem', fontSize: '0.8rem', width: 'auto', background: 'var(--expense-color)', whiteSpace: 'nowrap' }}
+                        >
+                          Bayar Cicilan
+                        </button>
                       </div>
                     </div>
                   );
