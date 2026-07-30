@@ -527,13 +527,72 @@ export default function App() {
     <div className="app-wrapper">
       {/* Top Header Bar */}
       <header className="top-header-bar">
-        <div className="brand-section">
-          <div className="brand-logo-badge">
-            <Wallet size={20} />
+        <div className="top-header-main">
+          <div className="brand-section">
+            <div className="brand-logo-badge">
+              <Wallet size={20} />
+            </div>
+            <div className="brand-title-box">
+              <h2>WALLET WISE</h2>
+              <span>Financial Hub</span>
+            </div>
           </div>
-          <div className="brand-title-box">
-            <h2>WALLET WISE</h2>
-            <span>Financial Hub</span>
+
+          {/* Header Right Actions */}
+          <div className="header-right-actions">
+            <div className="icon-button-badge" title="Notifikasi">
+              <Bell size={17} />
+              <span className="notification-dot"></span>
+            </div>
+
+            <div style={{ position: 'relative' }}>
+              <button 
+                onClick={() => setShowProfileMenu(!showProfileMenu)}
+                style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'rgba(255,255,255,0.04)', border: '1px solid var(--border-color)', padding: '0.35rem 0.6rem', borderRadius: '20px', cursor: 'pointer' }}
+              >
+                <div style={{ width: '26px', height: '26px', borderRadius: '50%', background: '#10b981', color: '#0b0f19', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '700', fontSize: '0.75rem' }}>
+                  {session?.user?.email ? session.user.email[0].toUpperCase() : 'U'}
+                </div>
+                <span className="hide-on-mobile" style={{ fontSize: '0.8rem', color: '#fff', fontWeight: 500, maxWidth: '100px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {session?.user?.email ? session.user.email.split('@')[0] : 'User'}
+                </span>
+              </button>
+
+              {showProfileMenu && (
+                <div className="profile-dropdown" style={{ right: 0, left: 'auto', top: '120%' }}>
+                  <div className="profile-header">
+                    <strong style={{ fontSize: '0.85rem', color: 'var(--text-primary)' }}>Akun Anda</strong>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {session?.user?.email}
+                    </span>
+                  </div>
+                  <div className="profile-divider"></div>
+                  <div style={{ padding: '0.25rem 0.5rem' }}>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '0.25rem' }}>Valuta Utama</span>
+                    <select value={currency} onChange={(e) => setCurrency(e.target.value)} className="currency-select" style={{ width: '100%' }}>
+                      <option value="IDR">IDR (Rp)</option>
+                      <option value="USD">USD ($)</option>
+                      <option value="EUR">EUR (€)</option>
+                      <option value="SGD">SGD ($)</option>
+                    </select>
+                  </div>
+                  <div className="profile-divider"></div>
+                  <button onClick={() => { setShowProfileMenu(false); setIsProfileOpen(true); }} className="profile-action-btn" style={{ color: 'var(--accent-color)' }}>
+                    <User size={14} /> <span>Pengaturan Profil</span>
+                  </button>
+                  <div className="profile-divider"></div>
+                  <button onClick={() => { setShowProfileMenu(false); resetData(); }} className="profile-action-btn reset">
+                    <RefreshCw size={14} /> <span>Reset Data</span>
+                  </button>
+                  <button onClick={() => { setShowProfileMenu(false); deleteAccount(); }} className="profile-action-btn delete">
+                    <UserX size={14} /> <span>Hapus Akun</span>
+                  </button>
+                  <button onClick={() => { setShowProfileMenu(false); handleLogout(); }} className="profile-action-btn logout">
+                    <LogOut size={14} /> <span>Keluar</span>
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
@@ -554,63 +613,6 @@ export default function App() {
           <button className={`nav-pill-item ${activeTab === 'reminders' ? 'active' : ''}`} onClick={() => setActiveTab('reminders')}>
             Tagihan & Cicilan
           </button>
-        </div>
-
-        {/* Header Right Actions */}
-        <div className="header-right-actions">
-          <div className="icon-button-badge" title="Notifikasi">
-            <Bell size={17} />
-            <span className="notification-dot"></span>
-          </div>
-
-          <div style={{ position: 'relative' }}>
-            <button 
-              onClick={() => setShowProfileMenu(!showProfileMenu)}
-              style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'rgba(255,255,255,0.04)', border: '1px solid var(--border-color)', padding: '0.35rem 0.6rem', borderRadius: '20px', cursor: 'pointer' }}
-            >
-              <div style={{ width: '26px', height: '26px', borderRadius: '50%', background: '#10b981', color: '#0b0f19', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '700', fontSize: '0.75rem' }}>
-                {session?.user?.email ? session.user.email[0].toUpperCase() : 'U'}
-              </div>
-              <span className="hide-on-mobile" style={{ fontSize: '0.8rem', color: '#fff', fontWeight: 500, maxWidth: '100px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                {session?.user?.email ? session.user.email.split('@')[0] : 'User'}
-              </span>
-            </button>
-
-            {showProfileMenu && (
-              <div className="profile-dropdown" style={{ right: 0, left: 'auto', top: '120%' }}>
-                <div className="profile-header">
-                  <strong style={{ fontSize: '0.85rem', color: 'var(--text-primary)' }}>Akun Anda</strong>
-                  <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {session?.user?.email}
-                  </span>
-                </div>
-                <div className="profile-divider"></div>
-                <div style={{ padding: '0.25rem 0.5rem' }}>
-                  <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '0.25rem' }}>Valuta Utama</span>
-                  <select value={currency} onChange={(e) => setCurrency(e.target.value)} className="currency-select" style={{ width: '100%' }}>
-                    <option value="IDR">IDR (Rp)</option>
-                    <option value="USD">USD ($)</option>
-                    <option value="EUR">EUR (€)</option>
-                    <option value="SGD">SGD ($)</option>
-                  </select>
-                </div>
-                <div className="profile-divider"></div>
-                <button onClick={() => { setShowProfileMenu(false); setIsProfileOpen(true); }} className="profile-action-btn" style={{ color: 'var(--accent-color)' }}>
-                  <User size={14} /> <span>Pengaturan Profil</span>
-                </button>
-                <div className="profile-divider"></div>
-                <button onClick={() => { setShowProfileMenu(false); resetData(); }} className="profile-action-btn reset">
-                  <RefreshCw size={14} /> <span>Reset Data</span>
-                </button>
-                <button onClick={() => { setShowProfileMenu(false); deleteAccount(); }} className="profile-action-btn delete">
-                  <UserX size={14} /> <span>Hapus Akun</span>
-                </button>
-                <button onClick={() => { setShowProfileMenu(false); handleLogout(); }} className="profile-action-btn logout">
-                  <LogOut size={14} /> <span>Keluar</span>
-                </button>
-              </div>
-            )}
-          </div>
         </div>
       </header>
 
