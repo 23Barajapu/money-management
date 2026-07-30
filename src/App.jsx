@@ -538,12 +538,12 @@ export default function App() {
         </div>
 
         {/* Header Nav Pills */}
-        <div className="header-nav-pills hide-on-mobile">
+        <div className="header-nav-pills">
           <button className={`nav-pill-item ${activeTab === 'dashboard' ? 'active' : ''}`} onClick={() => setActiveTab('dashboard')}>
             Dashboard
           </button>
           <button className={`nav-pill-item ${activeTab === 'transactions' ? 'active' : ''}`} onClick={() => setActiveTab('transactions')}>
-            Accounts
+            Transaksi
           </button>
           <button className={`nav-pill-item ${activeTab === 'savings' ? 'active' : ''}`} onClick={() => setActiveTab('savings')}>
             Budgets
@@ -554,23 +554,10 @@ export default function App() {
           <button className={`nav-pill-item ${activeTab === 'reminders' ? 'active' : ''}`} onClick={() => setActiveTab('reminders')}>
             Tagihan & Cicilan
           </button>
-          <button className="nav-pill-item" onClick={() => setIsProfileOpen(true)}>
-            Profile
-          </button>
         </div>
 
         {/* Header Right Actions */}
         <div className="header-right-actions">
-          <div className="header-search-box hide-on-mobile">
-            <Search size={15} />
-            <input 
-              type="text" 
-              placeholder="Search..." 
-              value={searchQuery} 
-              onChange={(e) => setSearchQuery(e.target.value)} 
-            />
-          </div>
-
           <div className="icon-button-badge" title="Notifikasi">
             <Bell size={17} />
             <span className="notification-dot"></span>
@@ -627,27 +614,7 @@ export default function App() {
         </div>
       </header>
 
-      {/* Slim Left Rail Navigation Sidebar */}
-      <aside className="rail-sidebar">
-        <button className={`rail-item ${activeTab === 'dashboard' ? 'active' : ''}`} onClick={() => setActiveTab('dashboard')} title="Dashboard">
-          <LayoutDashboard size={20} />
-        </button>
-        <button className={`rail-item ${activeTab === 'transactions' ? 'active' : ''}`} onClick={() => setActiveTab('transactions')} title="Transaksi">
-          <History size={20} />
-        </button>
-        <button className={`rail-item ${activeTab === 'savings' ? 'active' : ''}`} onClick={() => setActiveTab('savings')} title="Anggaran & Tabungan">
-          <PiggyBank size={20} />
-        </button>
-        <button className={`rail-item ${activeTab === 'reminders' ? 'active' : ''}`} onClick={() => setActiveTab('reminders')} title="Tagihan & Cicilan">
-          <Calendar size={20} />
-        </button>
-        <button className={`rail-item ${activeTab === 'analytics' ? 'active' : ''}`} onClick={() => setActiveTab('analytics')} title="Analisis & Ekspor">
-          <TrendingUp size={20} />
-        </button>
-        <button className="rail-item" onClick={() => setIsProfileOpen(true)} title="Profil" style={{ marginTop: 'auto' }}>
-          <User size={20} />
-        </button>
-      </aside>
+
 
       {/* Main Content Area */}
       <main className="main-content">
