@@ -19,6 +19,11 @@ Aplikasi catatan keuangan pribadi berbasis React, Vite, dan Supabase. Bisa catat
   - Lacak cicilan panjang — lihat progres pembayaran dan cicilan tersisa.
   - Transaksi berulang (harian/mingguan/bulanan) dicatat otomatis tiap login.
   - Pilih dompet mana yang dipakai saat bayar tagihan atau cicilan.
+  - **Notifikasi Tagihan (H-5)**: Indikator lonceng interaktif di navbar yang otomatis mengingatkan tagihan yang mendekati jatuh tempo ($\le 5$ hari) beserta popover detail.
+
+- **Multi-Language (Auto Device Language)**
+  - Otomatis menyesuaikan bahasa antarmuka web dengan bahasa perangkat pengguna (*Bahasa Indonesia / English*).
+  - Dilengkapi opsi *override* manual pada menu profil.
 
 - **Anggaran & Tabungan**
   - Pasang batas pengeluaran per kategori, ada peringatan kalau sudah mendekati/melewati batas.
