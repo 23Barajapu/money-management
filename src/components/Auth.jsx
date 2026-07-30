@@ -30,40 +30,47 @@ export default function Auth({ initialMessage = '' }) {
 
   const handleAuthSubmit = async (e) => {
     e.preventDefault();
-    setLoading(true);
     setMessage({ text: '', type: '' });
+
+    const trimmedEmail = email.trim();
+    if ((mode === 'signin' || mode === 'signup') && password.length < 6) {
+      setMessage({ text: 'Password minimal 6 karakter!', type: 'error' });
+      return;
+    }
+
+    setLoading(true);
 
     try {
       if (mode === 'signin') {
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
+        const { error } = await supabase.auth.signInWithPassword({ email: trimmedEmail, password });
         if (error) throw error;
       } else if (mode === 'signup') {
-        const { data, error } = await supabase.auth.signUp({ email, password });
+        const { data, error } = await supabase.auth.signUp({ email: trimmedEmail, password });
         if (error) throw error;
         
         if (data?.user && data.user.identities && data.user.identities.length === 0) {
-          throw new Error('Email sudah terdaftar!');
+          throw new Error('Email sudah terdaftar! Silakan masuk.');
         }
         
         setMode('signup_otp');
         setMessage({ text: 'Registrasi sukses! Masukkan kode OTP dari email Anda. (Periksa folder Spam jika tidak masuk)', type: 'success' });
       } else if (mode === 'signup_otp') {
         const { error } = await supabase.auth.verifyOtp({
-          email,
-          token: otpToken,
+          email: trimmedEmail,
+          token: otpToken.trim(),
           type: 'signup'
         });
         if (error) throw error;
         setMessage({ text: 'Verifikasi sukses! Akun aktif.', type: 'success' });
       } else if (mode === 'forgot') {
-        const { error } = await supabase.auth.resetPasswordForEmail(email);
+        const { error } = await supabase.auth.resetPasswordForEmail(trimmedEmail);
         if (error) throw error;
         setMode('reset_otp');
         setMessage({ text: 'Kode reset terkirim! Periksa inbox email Anda. (Periksa folder Spam jika tidak masuk)', type: 'success' });
       } else if (mode === 'reset_otp') {
         const { error } = await supabase.auth.verifyOtp({
-          email,
-          token: otpToken,
+          email: trimmedEmail,
+          token: otpToken.trim(),
           type: 'recovery'
         });
         if (error) throw error;
@@ -195,9 +202,23 @@ export default function Auth({ initialMessage = '' }) {
           )}
 
           {/* Submit Button */}
-          <button type="submit" className="btn-submit" disabled={loading} style={{ marginBottom: '0.75rem' }}>
+          <button 
+            type="submit" 
+            className="btn-submit" 
+            disabled={loading} 
+            style={{ 
+              marginBottom: '0.75rem', 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'center', 
+              gap: '0.5rem' 
+            }}
+          >
             {loading ? (
-              <Loader2 className="animate-spin" size={18} />
+              <>
+                <Loader2 className="animate-spin" size={18} />
+                <span>Memproses...</span>
+              </>
             ) : mode === 'signin' ? (
               'Masuk'
             ) : mode === 'signup' ? (
