@@ -532,7 +532,7 @@ export default function App() {
             <Wallet size={20} />
           </div>
           <div className="brand-title-box">
-            <h2>WALLET WISE</h2>
+            <h2>MoManage</h2>
             <span>Financial Hub</span>
           </div>
         </div>
