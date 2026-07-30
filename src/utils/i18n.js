@@ -46,7 +46,7 @@ export const translations = {
     language: 'Bahasa',
     autoDevice: 'Otomatis (Perangkat)',
     indonesian: 'Bahasa Indonesia',
-    english: 'English',
+    english: 'Inggris',
     profileSettings: 'Pengaturan Profil',
     resetData: 'Reset Data',
     deleteAccount: 'Hapus Akun',

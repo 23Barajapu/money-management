@@ -113,11 +113,11 @@ export default function App() {
   // Fetch data when session is active
   useEffect(() => {
     if (!session) return;
-    fetchUserData();
+    fetchUserData(true);
   }, [session]);
 
-  const fetchUserData = async () => {
-    setLoading(true);
+  const fetchUserData = async (showLoadingScreen = false) => {
+    if (showLoadingScreen) setLoading(true);
     const userId = session.user.id;
 
     try {
@@ -150,7 +150,7 @@ export default function App() {
         .order('due_date', { ascending: true });
       setBills(billsData || []);
 
-      // 4. Fetch wallets
+      // 5. Fetch wallets
       const { data: wlData, error: wlErr } = await supabase
         .from('wallets')
         .select('*');
@@ -165,7 +165,7 @@ export default function App() {
         setWallets(defaultWallets);
       }
 
-      // 5. Fetch profile
+      // 6. Fetch profile
       const { data: profData, error: profErr } = await supabase
         .from('profiles')
         .select('*')
@@ -182,7 +182,7 @@ export default function App() {
     } catch (err) {
       console.error('Error fetching data:', err.message);
     } finally {
-      setLoading(false);
+      if (showLoadingScreen) setLoading(false);
     }
   };
 

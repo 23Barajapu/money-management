@@ -49,7 +49,6 @@ export default function Reminders({ onAddTransaction, formatIDR, wallets = [], i
 
       setRecurrings(recRes.data || []);
       setBills(billsRes.data || []);
-      if (fetchUserData) fetchUserData();
 
       // Trigger automatic recurring checking on load
       checkAndTriggerRecurring(recRes.data || [], user.id);
