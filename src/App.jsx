@@ -48,6 +48,8 @@ export default function App() {
   const [rates, setRates] = useState({ USD: 0.000062, EUR: 0.000057, SGD: 0.000083 });
   const [currency, setCurrency] = useState('IDR');
   const [searchQuery, setSearchQuery] = useState('');
+  const [bills, setBills] = useState([]);
+  const [showNotifMenu, setShowNotifMenu] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [profile, setProfile] = useState({ payday_date: 1, email_notif: true, push_notif: true });
   const [isProfileOpen, setIsProfileOpen] = useState(false);
@@ -135,6 +137,14 @@ export default function App() {
         paidAmount: parseFloat(inst.paid_amount),
         monthlyPayment: parseFloat(inst.monthly_payment)
       })));
+
+      // 4. Fetch bills for notifications (H-5)
+      const { data: billsData } = await supabase
+        .from('bills')
+        .select('*')
+        .eq('user_id', userId)
+        .order('due_date', { ascending: true });
+      setBills(billsData || []);
 
       // 4. Fetch wallets
       const { data: wlData, error: wlErr } = await supabase
@@ -257,6 +267,22 @@ export default function App() {
       .filter(w => w.type === 'cashless')
       .reduce((sum, w) => sum + w.balance, 0);
   }, [walletsWithUpdatedBalances]);
+
+  // Calculate bills due within 5 days (H-5)
+  const dueSoonBills = useMemo(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    return bills.filter(b => {
+      if (b.is_paid) return false;
+      if (!b.due_date) return false;
+      const dueDate = new Date(b.due_date);
+      dueDate.setHours(0, 0, 0, 0);
+      const diffTime = dueDate - today;
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      return diffDays <= 5;
+    });
+  }, [bills]);
 
   // Total Balance
   const balance = useMemo(() => cashBalance + cashlessBalance, [cashBalance, cashlessBalance]);
@@ -532,7 +558,7 @@ export default function App() {
             <Wallet size={20} />
           </div>
           <div className="brand-title-box">
-            <h2>MoManage</h2>
+            <h2>Money Management</h2>
             <span>Financial Hub</span>
           </div>
         </div>
@@ -558,9 +584,76 @@ export default function App() {
 
         {/* Header Right Actions */}
         <div className="header-right-actions">
-          <div className="icon-button-badge" title="Notifikasi">
-            <Bell size={17} />
-            <span className="notification-dot"></span>
+          {/* Notification Bell Dropdown (H-5 Reminders) */}
+          <div style={{ position: 'relative' }}>
+            <button 
+              className="icon-button-badge" 
+              onClick={() => { setShowNotifMenu(!showNotifMenu); setShowProfileMenu(false); }}
+              title="Pengingat Tagihan H-5"
+              style={{ border: dueSoonBills.length > 0 ? '1px solid var(--expense-color)' : '1px solid var(--border-color)' }}
+            >
+              <Bell size={17} color={dueSoonBills.length > 0 ? '#ef4444' : 'var(--text-secondary)'} />
+              {dueSoonBills.length > 0 && (
+                <span className="notification-badge-count">
+                  {dueSoonBills.length}
+                </span>
+              )}
+            </button>
+
+            {showNotifMenu && (
+              <div className="notif-dropdown" style={{ position: 'absolute', right: 0, top: '125%', width: '320px', background: '#121824', border: '1px solid var(--border-color)', borderRadius: '12px', padding: '1rem', boxShadow: '0 10px 30px rgba(0,0,0,0.5)', zIndex: 1000 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem', paddingBottom: '0.5rem', borderBottom: '1px solid var(--border-color)' }}>
+                  <strong style={{ fontSize: '0.85rem', color: '#fff', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                    <Bell size={14} color="var(--expense-color)" /> Pengingat Tagihan (H-5)
+                  </strong>
+                  <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', background: 'rgba(255,255,255,0.05)', padding: '0.15rem 0.4rem', borderRadius: '4px' }}>
+                    {dueSoonBills.length} Tagihan
+                  </span>
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', maxHeight: '260px', overflowY: 'auto' }}>
+                  {dueSoonBills.length === 0 ? (
+                    <div style={{ textAlign: 'center', padding: '1rem 0', color: 'var(--text-secondary)', fontSize: '0.8rem' }}>
+                      Tidak ada tagihan mendekati jatuh tempo (H-5). 👍
+                    </div>
+                  ) : (
+                    dueSoonBills.map(b => {
+                      const today = new Date();
+                      today.setHours(0,0,0,0);
+                      const dDate = new Date(b.due_date);
+                      dDate.setHours(0,0,0,0);
+                      const diffDays = Math.ceil((dDate - today) / (1000 * 60 * 60 * 24));
+
+                      const statusText = diffDays < 0 ? 'Terlewat!' : diffDays === 0 ? 'Jatuh Tempo Hari Ini!' : `${diffDays} Hari Lagi (H-${diffDays})`;
+                      const isDanger = diffDays <= 1;
+
+                      return (
+                        <div key={b.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(255,255,255,0.03)', padding: '0.6rem 0.75rem', borderRadius: '8px', border: isDanger ? '1px solid rgba(239, 68, 68, 0.3)' : '1px solid rgba(255, 255, 255, 0.05)' }}>
+                          <div>
+                            <span style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#fff' }}>{b.name}</span>
+                            <span style={{ display: 'block', fontSize: '0.72rem', color: isDanger ? '#ef4444' : '#f59e0b', fontWeight: 500 }}>
+                              {statusText} • {b.due_date}
+                            </span>
+                          </div>
+                          <div style={{ textAlign: 'right' }}>
+                            <span style={{ display: 'block', fontSize: '0.825rem', fontWeight: 700, color: '#fff' }}>{formatIDR(b.amount)}</span>
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+
+                {dueSoonBills.length > 0 && (
+                  <button 
+                    onClick={() => { setShowNotifMenu(false); setActiveTab('reminders'); }}
+                    style={{ width: '100%', marginTop: '0.75rem', padding: '0.5rem', background: 'var(--expense-color)', border: 'none', borderRadius: '8px', color: '#fff', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer' }}
+                  >
+                    Bayar Sekarang di Tagihan & Cicilan →
+                  </button>
+                )}
+              </div>
+            )}
           </div>
 
           <div style={{ position: 'relative' }}>
@@ -849,6 +942,7 @@ export default function App() {
               showToast={showToast}
               showConfirm={showConfirm}
               currency={currency}
+              fetchUserData={fetchUserData}
             />
             <InstallmentTracker 
               installments={installments}

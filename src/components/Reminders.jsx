@@ -3,7 +3,7 @@ import { supabase } from '../supabaseClient';
 import { Calendar, Bell, Plus, Trash2, CheckCircle2, Clock, Play, Wallet, CreditCard } from 'lucide-react';
 import { useCurrencyInput } from '../hooks/useCurrencyInput';
 
-export default function Reminders({ onAddTransaction, formatIDR, wallets = [], installments = [], onPayInstallment, onAddInstallment, showToast, showConfirm, currency = 'IDR' }) {
+export default function Reminders({ onAddTransaction, formatIDR, wallets = [], installments = [], onPayInstallment, onAddInstallment, showToast, showConfirm, currency = 'IDR', fetchUserData }) {
   const [recurrings, setRecurrings] = useState([]);
   const [bills, setBills] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -49,6 +49,7 @@ export default function Reminders({ onAddTransaction, formatIDR, wallets = [], i
 
       setRecurrings(recRes.data || []);
       setBills(billsRes.data || []);
+      if (fetchUserData) fetchUserData();
 
       // Trigger automatic recurring checking on load
       checkAndTriggerRecurring(recRes.data || [], user.id);
