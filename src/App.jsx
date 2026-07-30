@@ -593,7 +593,7 @@ export default function App() {
             <button 
               className="icon-button-badge" 
               onClick={() => { setShowNotifMenu(!showNotifMenu); setShowProfileMenu(false); }}
-              title="Pengingat Tagihan H-5"
+              title="Pengingat Tagihan"
               style={{ border: dueSoonBills.length > 0 ? '1px solid var(--expense-color)' : '1px solid var(--border-color)' }}
             >
               <Bell size={17} color={dueSoonBills.length > 0 ? '#ef4444' : 'var(--text-secondary)'} />

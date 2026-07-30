@@ -37,7 +37,7 @@ export const translations = {
     paydayCycle: 'Siklus Gajian',
     
     // Notifications & Profile
-    billReminders: 'Pengingat Tagihan (H-5)',
+    billReminders: 'Pengingat Tagihan',
     billsUnit: 'Tagihan',
     noUpcomingBills: 'Tidak ada tagihan mendekati jatuh tempo (H-5). 👍',
     payNow: 'Bayar Sekarang di Tagihan & Cicilan →',
