@@ -4,6 +4,12 @@ Aplikasi catatan keuangan pribadi berbasis React, Vite, dan Supabase. Bisa catat
 
 ---
 
+## Overview Tampilan (UI Preview)
+
+![Dashboard Overview](./docs/dashboard-preview.png)
+
+---
+
 ## Fitur
 
 - **Pencatatan Transaksi**
