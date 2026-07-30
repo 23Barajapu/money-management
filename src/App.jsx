@@ -36,6 +36,7 @@ import ProfileModal from './components/ProfileModal';
 import Toast from './components/Toast';
 import ConfirmModal from './components/ConfirmModal';
 import Auth from './components/Auth';
+import { getTranslation, getDeviceLanguage } from './utils/i18n';
 
 export default function App() {
   const [session, setSession] = useState(null);
@@ -47,6 +48,7 @@ export default function App() {
   const [activeTab, setActiveTab] = useState('dashboard'); // 'dashboard', 'transactions', 'savings', 'installments', 'reminders', 'analytics'
   const [rates, setRates] = useState({ USD: 0.000062, EUR: 0.000057, SGD: 0.000083 });
   const [currency, setCurrency] = useState('IDR');
+  const [langOption, setLangOption] = useState('auto');
   const [searchQuery, setSearchQuery] = useState('');
   const [bills, setBills] = useState([]);
   const [showNotifMenu, setShowNotifMenu] = useState(false);
@@ -56,6 +58,8 @@ export default function App() {
   const [logoutMessage, setLogoutMessage] = useState('');
   const [toast, setToast] = useState({ message: '', type: 'info' });
   const [confirmState, setConfirmState] = useState({ isOpen: false, title: '', message: '', onConfirm: null, isDanger: false });
+
+  const t = (key) => getTranslation(langOption, key);
 
   const showToast = (message, type = 'info') => {
     setToast({ message, type });
@@ -566,19 +570,19 @@ export default function App() {
         {/* Header Nav Pills */}
         <div className="header-nav-pills">
           <button className={`nav-pill-item ${activeTab === 'dashboard' ? 'active' : ''}`} onClick={() => setActiveTab('dashboard')}>
-            Dashboard
+            {t('dashboard')}
           </button>
           <button className={`nav-pill-item ${activeTab === 'transactions' ? 'active' : ''}`} onClick={() => setActiveTab('transactions')}>
-            Transaksi
+            {t('transactions')}
           </button>
           <button className={`nav-pill-item ${activeTab === 'savings' ? 'active' : ''}`} onClick={() => setActiveTab('savings')}>
-            Budgets
+            {t('budgets')}
           </button>
           <button className={`nav-pill-item ${activeTab === 'analytics' ? 'active' : ''}`} onClick={() => setActiveTab('analytics')}>
-            Analytics
+            {t('analytics')}
           </button>
           <button className={`nav-pill-item ${activeTab === 'reminders' ? 'active' : ''}`} onClick={() => setActiveTab('reminders')}>
-            Tagihan & Cicilan
+            {t('reminders')}
           </button>
         </div>
 
@@ -604,17 +608,17 @@ export default function App() {
               <div className="notif-dropdown" style={{ position: 'absolute', right: 0, top: '125%', width: '320px', background: '#121824', border: '1px solid var(--border-color)', borderRadius: '12px', padding: '1rem', boxShadow: '0 10px 30px rgba(0,0,0,0.5)', zIndex: 1000 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem', paddingBottom: '0.5rem', borderBottom: '1px solid var(--border-color)' }}>
                   <strong style={{ fontSize: '0.85rem', color: '#fff', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                    <Bell size={14} color="var(--expense-color)" /> Pengingat Tagihan (H-5)
+                    <Bell size={14} color="var(--expense-color)" /> {t('billReminders')}
                   </strong>
                   <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', background: 'rgba(255,255,255,0.05)', padding: '0.15rem 0.4rem', borderRadius: '4px' }}>
-                    {dueSoonBills.length} Tagihan
+                    {dueSoonBills.length} {t('billsUnit')}
                   </span>
                 </div>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', maxHeight: '260px', overflowY: 'auto' }}>
                   {dueSoonBills.length === 0 ? (
                     <div style={{ textAlign: 'center', padding: '1rem 0', color: 'var(--text-secondary)', fontSize: '0.8rem' }}>
-                      Tidak ada tagihan mendekati jatuh tempo (H-5). 👍
+                      {t('noUpcomingBills')}
                     </div>
                   ) : (
                     dueSoonBills.map(b => {
@@ -649,7 +653,7 @@ export default function App() {
                     onClick={() => { setShowNotifMenu(false); setActiveTab('reminders'); }}
                     style={{ width: '100%', marginTop: '0.75rem', padding: '0.5rem', background: 'var(--expense-color)', border: 'none', borderRadius: '8px', color: '#fff', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer' }}
                   >
-                    Bayar Sekarang di Tagihan & Cicilan →
+                    {t('payNow')}
                   </button>
                 )}
               </div>
@@ -672,14 +676,14 @@ export default function App() {
             {showProfileMenu && (
               <div className="profile-dropdown" style={{ right: 0, left: 'auto', top: '120%' }}>
                 <div className="profile-header">
-                  <strong style={{ fontSize: '0.85rem', color: 'var(--text-primary)' }}>Akun Anda</strong>
+                  <strong style={{ fontSize: '0.85rem', color: 'var(--text-primary)' }}>{t('yourAccount')}</strong>
                   <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {session?.user?.email}
                   </span>
                 </div>
                 <div className="profile-divider"></div>
                 <div style={{ padding: '0.25rem 0.5rem' }}>
-                  <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '0.25rem' }}>Valuta Utama</span>
+                  <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '0.25rem' }}>{t('mainCurrency')}</span>
                   <select value={currency} onChange={(e) => setCurrency(e.target.value)} className="currency-select" style={{ width: '100%' }}>
                     <option value="IDR">IDR (Rp)</option>
                     <option value="USD">USD ($)</option>
@@ -687,19 +691,27 @@ export default function App() {
                     <option value="SGD">SGD ($)</option>
                   </select>
                 </div>
+                <div style={{ padding: '0.25rem 0.5rem', marginTop: '0.25rem' }}>
+                  <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '0.25rem' }}>{t('language')}</span>
+                  <select value={langOption} onChange={(e) => setLangOption(e.target.value)} className="currency-select" style={{ width: '100%' }}>
+                    <option value="auto">{t('autoDevice')} ({getDeviceLanguage() === 'en' ? 'English' : 'Indonesia'})</option>
+                    <option value="id">{t('indonesian')}</option>
+                    <option value="en">{t('english')}</option>
+                  </select>
+                </div>
                 <div className="profile-divider"></div>
                 <button onClick={() => { setShowProfileMenu(false); setIsProfileOpen(true); }} className="profile-action-btn" style={{ color: 'var(--accent-color)' }}>
-                  <User size={14} /> <span>Pengaturan Profil</span>
+                  <User size={14} /> <span>{t('profileSettings')}</span>
                 </button>
                 <div className="profile-divider"></div>
                 <button onClick={() => { setShowProfileMenu(false); resetData(); }} className="profile-action-btn reset">
-                  <RefreshCw size={14} /> <span>Reset Data</span>
+                  <RefreshCw size={14} /> <span>{t('resetData')}</span>
                 </button>
                 <button onClick={() => { setShowProfileMenu(false); deleteAccount(); }} className="profile-action-btn delete">
-                  <UserX size={14} /> <span>Hapus Akun</span>
+                  <UserX size={14} /> <span>{t('deleteAccount')}</span>
                 </button>
                 <button onClick={() => { setShowProfileMenu(false); handleLogout(); }} className="profile-action-btn logout">
-                  <LogOut size={14} /> <span>Keluar</span>
+                  <LogOut size={14} /> <span>{t('logout')}</span>
                 </button>
               </div>
             )}
@@ -718,7 +730,7 @@ export default function App() {
             <div className="dashboard-row-1">
               {/* Card 1: Total Balance */}
               <div className="card" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-                <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', fontWeight: 500 }}>Total Balance</span>
+                <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', fontWeight: 500 }}>{t('totalBalance')}</span>
                 <div style={{ margin: '0.5rem 0' }}>
                   <h2 style={{ fontSize: '2rem', fontWeight: 800, color: '#fff', margin: 0, letterSpacing: '-0.02em' }}>
                     {formatIDR(balance)}
@@ -726,25 +738,25 @@ export default function App() {
                 </div>
                 <div>
                   <span className="badge-green-trend">
-                    <TrendingUp size={12} /> +2.4% vs last month
+                    <TrendingUp size={12} /> +2.4% {t('vsLastMonth')}
                   </span>
                 </div>
               </div>
 
               {/* Card 2: Current Month Summary */}
               <div className="card" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-                <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', fontWeight: 500 }}>Current Month</span>
+                <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', fontWeight: 500 }}>{t('currentMonth')}</span>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.5rem', marginTop: '0.5rem' }}>
                   <div>
-                    <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', display: 'block' }}>Income</span>
+                    <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', display: 'block' }}>{t('income')}</span>
                     <strong style={{ fontSize: '1rem', color: 'var(--income-color)' }}>{formatIDR(paydayIncome)}</strong>
                   </div>
                   <div>
-                    <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', display: 'block' }}>Expenses</span>
+                    <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', display: 'block' }}>{t('expenses')}</span>
                     <strong style={{ fontSize: '1rem', color: 'var(--expense-color)' }}>{formatIDR(paydayExpense)}</strong>
                   </div>
                   <div>
-                    <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', display: 'block' }}>Saved</span>
+                    <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', display: 'block' }}>{t('saved')}</span>
                     <strong style={{ fontSize: '1rem', color: 'var(--saving-color)' }}>{formatIDR(currentSaved)}</strong>
                   </div>
                 </div>
@@ -753,21 +765,21 @@ export default function App() {
               {/* Card 3: Quick Actions */}
               <div className="card" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', fontWeight: 500 }}>Quick Actions</span>
+                  <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', fontWeight: 500 }}>{t('quickActions')}</span>
                   <MoreHorizontal size={16} color="var(--text-secondary)" />
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.4rem', marginTop: '0.5rem' }}>
                   <button onClick={() => setActiveTab('transactions')} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.25rem', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border-color)', padding: '0.6rem 0.25rem', borderRadius: '8px', color: '#fff', fontSize: '0.7rem', cursor: 'pointer' }}>
                     <Plus size={16} color="#10b981" />
-                    <span>Add Tx</span>
+                    <span>{t('addTx')}</span>
                   </button>
                   <button onClick={() => setActiveTab('transactions')} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.25rem', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border-color)', padding: '0.6rem 0.25rem', borderRadius: '8px', color: '#fff', fontSize: '0.7rem', cursor: 'pointer' }}>
                     <Send size={16} color="#06b6d4" />
-                    <span>Send Money</span>
+                    <span>{t('sendMoney')}</span>
                   </button>
                   <button onClick={() => setActiveTab('reminders')} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.25rem', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border-color)', padding: '0.6rem 0.25rem', borderRadius: '8px', color: '#fff', fontSize: '0.7rem', cursor: 'pointer' }}>
                     <CreditCard size={16} color="#f97316" />
-                    <span>Pay Bills</span>
+                    <span>{t('payBills')}</span>
                   </button>
                 </div>
               </div>
@@ -780,13 +792,13 @@ export default function App() {
               {/* Recent Transactions Box */}
               <div className="card" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                  <h3 style={{ fontSize: '1.1rem', fontWeight: 600, color: 'var(--text-primary)', margin: 0 }}>Recent Transactions</h3>
+                  <h3 style={{ fontSize: '1.1rem', fontWeight: 600, color: 'var(--text-primary)', margin: 0 }}>{t('recentActivity')}</h3>
                   <MoreHorizontal size={16} color="var(--text-secondary)" />
                 </div>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', flex: 1, overflowY: 'auto' }}>
                   {transactions.slice(0, 5).length === 0 ? (
-                    <div className="empty-state">Belum ada transaksi.</div>
+                    <div className="empty-state">{t('noTransactions')}</div>
                   ) : (
                     transactions.slice(0, 5).map(tx => (
                       <div key={tx.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(255,255,255,0.02)', padding: '0.6rem 0.75rem', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.04)' }}>
