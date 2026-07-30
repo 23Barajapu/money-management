@@ -13,11 +13,19 @@ import {
   Calendar,
   TrendingUp,
   User,
-  UserX
+  UserX,
+  Search,
+  Bell,
+  ChevronRight,
+  ArrowUpRight,
+  Send,
+  MoreHorizontal,
+  Plus
 } from 'lucide-react';
 import { supabase } from './supabaseClient';
 import TransactionForm from './components/TransactionForm';
 import DashboardCharts from './components/DashboardCharts';
+import BudgetOverview from './components/BudgetOverview';
 import InstallmentTracker from './components/InstallmentTracker';
 import BudgetAndSavings from './components/BudgetAndSavings';
 import Reminders from './components/Reminders';
@@ -39,6 +47,7 @@ export default function App() {
   const [activeTab, setActiveTab] = useState('dashboard'); // 'dashboard', 'transactions', 'savings', 'installments', 'reminders', 'analytics'
   const [rates, setRates] = useState({ USD: 0.000062, EUR: 0.000057, SGD: 0.000083 });
   const [currency, setCurrency] = useState('IDR');
+  const [searchQuery, setSearchQuery] = useState('');
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [profile, setProfile] = useState({ payday_date: 1, email_notif: true, push_notif: true });
   const [isProfileOpen, setIsProfileOpen] = useState(false);
@@ -516,199 +525,267 @@ export default function App() {
 
   return (
     <div className="app-wrapper">
-      {/* Sidebar Navigation */}
-      <aside className="sidebar">
-        <div className="sidebar-brand">
-          <h1>Money <span>Management</span></h1>
+      {/* Top Header Bar */}
+      <header className="top-header-bar">
+        <div className="brand-section">
+          <div className="brand-logo-badge">
+            <Wallet size={20} />
+          </div>
+          <div className="brand-title-box">
+            <h2>WALLET WISE</h2>
+            <span>Financial Hub</span>
+          </div>
         </div>
 
-        <nav className="sidebar-menu">
-          <button 
-            className={`sidebar-item ${activeTab === 'dashboard' ? 'active' : ''}`}
-            onClick={() => setActiveTab('dashboard')}
-          >
-            <LayoutDashboard size={18} />
-            <span>Dashboard</span>
+        {/* Header Nav Pills */}
+        <div className="header-nav-pills hide-on-mobile">
+          <button className={`nav-pill-item ${activeTab === 'dashboard' ? 'active' : ''}`} onClick={() => setActiveTab('dashboard')}>
+            Dashboard
           </button>
-
-          <button 
-            className={`sidebar-item ${activeTab === 'transactions' ? 'active' : ''}`}
-            onClick={() => setActiveTab('transactions')}
-          >
-            <History size={18} />
-            <span>Transaksi</span>
+          <button className={`nav-pill-item ${activeTab === 'transactions' ? 'active' : ''}`} onClick={() => setActiveTab('transactions')}>
+            Accounts
           </button>
-
-          <button 
-            className={`sidebar-item ${activeTab === 'savings' ? 'active' : ''}`}
-            onClick={() => setActiveTab('savings')}
-          >
-            <PiggyBank size={18} />
-            <span>Anggaran & Tabungan</span>
+          <button className={`nav-pill-item ${activeTab === 'savings' ? 'active' : ''}`} onClick={() => setActiveTab('savings')}>
+            Budgets
           </button>
-
-          <button 
-            className={`sidebar-item ${activeTab === 'reminders' ? 'active' : ''}`}
-            onClick={() => setActiveTab('reminders')}
-          >
-            <Calendar size={18} />
-            <span>Tagihan & Cicilan</span>
+          <button className={`nav-pill-item ${activeTab === 'analytics' ? 'active' : ''}`} onClick={() => setActiveTab('analytics')}>
+            Analytics
           </button>
-
-          <button 
-            className={`sidebar-item ${activeTab === 'analytics' ? 'active' : ''}`}
-            onClick={() => setActiveTab('analytics')}
-          >
-            <TrendingUp size={18} />
-            <span>Analisis & Ekspor</span>
+          <button className={`nav-pill-item ${activeTab === 'reminders' ? 'active' : ''}`} onClick={() => setActiveTab('reminders')}>
+            Tagihan & Cicilan
           </button>
-        </nav>
-
-        <div className="sidebar-footer" style={{ position: 'relative' }}>
-          <button 
-            className={`sidebar-item ${showProfileMenu ? 'active' : ''}`}
-            onClick={() => setShowProfileMenu(!showProfileMenu)}
-            style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '0.75rem', background: 'transparent', border: 'none', cursor: 'pointer', textAlign: 'left' }}
-          >
-            <div style={{ 
-              width: '24px', 
-              height: '24px', 
-              borderRadius: '50%', 
-              background: 'var(--accent-color)', 
-              color: '#fff', 
-              display: 'flex', 
-              alignItems: 'center', 
-              justifyContent: 'center',
-              fontWeight: 600,
-              fontSize: '0.75rem',
-              flexShrink: 0
-            }}>
-              {session?.user?.email ? session.user.email[0].toUpperCase() : 'U'}
-            </div>
-            <span className="hide-on-mobile" style={{ fontSize: '0.85rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'var(--text-primary)' }}>
-              {session?.user?.email || 'Akun Saya'}
-            </span>
+          <button className="nav-pill-item" onClick={() => setIsProfileOpen(true)}>
+            Profile
           </button>
-
-          {showProfileMenu && (
-            <div className="profile-dropdown">
-              <div className="profile-header">
-                <strong style={{ fontSize: '0.85rem', color: 'var(--text-primary)' }}>Akun Anda</strong>
-                <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  {session?.user?.email}
-                </span>
-              </div>
-              <div className="profile-divider"></div>
-              
-              <div style={{ padding: '0.25rem 0.5rem' }}>
-                <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '0.25rem' }}>Valuta Utama</span>
-                <select 
-                  value={currency} 
-                  onChange={(e) => setCurrency(e.target.value)} 
-                  className="currency-select"
-                  style={{ width: '100%' }}
-                >
-                  <option value="IDR">IDR (Rp)</option>
-                  <option value="USD">USD ($)</option>
-                  <option value="EUR">EUR (€)</option>
-                  <option value="SGD">SGD ($)</option>
-                </select>
-              </div>
-
-              <div className="profile-divider"></div>
-
-              <button 
-                onClick={() => { setShowProfileMenu(false); setIsProfileOpen(true); }} 
-                className="profile-action-btn"
-                style={{ color: 'var(--accent-color)' }}
-              >
-                <User size={14} />
-                <span>Pengaturan Profil</span>
-              </button>
-
-              <div className="profile-divider"></div>
-
-              <button 
-                onClick={() => { setShowProfileMenu(false); resetData(); }} 
-                className="profile-action-btn reset"
-              >
-                <RefreshCw size={14} />
-                <span>Reset Data</span>
-              </button>
-
-              <button 
-                onClick={() => { setShowProfileMenu(false); deleteAccount(); }} 
-                className="profile-action-btn delete"
-              >
-                <UserX size={14} />
-                <span>Hapus Akun</span>
-              </button>
-
-              <button 
-                onClick={() => { setShowProfileMenu(false); handleLogout(); }} 
-                className="profile-action-btn logout"
-              >
-                <LogOut size={14} />
-                <span>Keluar</span>
-              </button>
-            </div>
-          )}
         </div>
+
+        {/* Header Right Actions */}
+        <div className="header-right-actions">
+          <div className="header-search-box hide-on-mobile">
+            <Search size={15} />
+            <input 
+              type="text" 
+              placeholder="Search..." 
+              value={searchQuery} 
+              onChange={(e) => setSearchQuery(e.target.value)} 
+            />
+          </div>
+
+          <div className="icon-button-badge" title="Notifikasi">
+            <Bell size={17} />
+            <span className="notification-dot"></span>
+          </div>
+
+          <div style={{ position: 'relative' }}>
+            <button 
+              onClick={() => setShowProfileMenu(!showProfileMenu)}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'rgba(255,255,255,0.04)', border: '1px solid var(--border-color)', padding: '0.35rem 0.6rem', borderRadius: '20px', cursor: 'pointer' }}
+            >
+              <div style={{ width: '26px', height: '26px', borderRadius: '50%', background: '#10b981', color: '#0b0f19', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '700', fontSize: '0.75rem' }}>
+                {session?.user?.email ? session.user.email[0].toUpperCase() : 'U'}
+              </div>
+              <span className="hide-on-mobile" style={{ fontSize: '0.8rem', color: '#fff', fontWeight: 500, maxWidth: '100px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {session?.user?.email ? session.user.email.split('@')[0] : 'User'}
+              </span>
+            </button>
+
+            {showProfileMenu && (
+              <div className="profile-dropdown" style={{ right: 0, left: 'auto', top: '120%' }}>
+                <div className="profile-header">
+                  <strong style={{ fontSize: '0.85rem', color: 'var(--text-primary)' }}>Akun Anda</strong>
+                  <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {session?.user?.email}
+                  </span>
+                </div>
+                <div className="profile-divider"></div>
+                <div style={{ padding: '0.25rem 0.5rem' }}>
+                  <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '0.25rem' }}>Valuta Utama</span>
+                  <select value={currency} onChange={(e) => setCurrency(e.target.value)} className="currency-select" style={{ width: '100%' }}>
+                    <option value="IDR">IDR (Rp)</option>
+                    <option value="USD">USD ($)</option>
+                    <option value="EUR">EUR (€)</option>
+                    <option value="SGD">SGD ($)</option>
+                  </select>
+                </div>
+                <div className="profile-divider"></div>
+                <button onClick={() => { setShowProfileMenu(false); setIsProfileOpen(true); }} className="profile-action-btn" style={{ color: 'var(--accent-color)' }}>
+                  <User size={14} /> <span>Pengaturan Profil</span>
+                </button>
+                <div className="profile-divider"></div>
+                <button onClick={() => { setShowProfileMenu(false); resetData(); }} className="profile-action-btn reset">
+                  <RefreshCw size={14} /> <span>Reset Data</span>
+                </button>
+                <button onClick={() => { setShowProfileMenu(false); deleteAccount(); }} className="profile-action-btn delete">
+                  <UserX size={14} /> <span>Hapus Akun</span>
+                </button>
+                <button onClick={() => { setShowProfileMenu(false); handleLogout(); }} className="profile-action-btn logout">
+                  <LogOut size={14} /> <span>Keluar</span>
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      </header>
+
+      {/* Slim Left Rail Navigation Sidebar */}
+      <aside className="rail-sidebar">
+        <button className={`rail-item ${activeTab === 'dashboard' ? 'active' : ''}`} onClick={() => setActiveTab('dashboard')} title="Dashboard">
+          <LayoutDashboard size={20} />
+        </button>
+        <button className={`rail-item ${activeTab === 'transactions' ? 'active' : ''}`} onClick={() => setActiveTab('transactions')} title="Transaksi">
+          <History size={20} />
+        </button>
+        <button className={`rail-item ${activeTab === 'savings' ? 'active' : ''}`} onClick={() => setActiveTab('savings')} title="Anggaran & Tabungan">
+          <PiggyBank size={20} />
+        </button>
+        <button className={`rail-item ${activeTab === 'reminders' ? 'active' : ''}`} onClick={() => setActiveTab('reminders')} title="Tagihan & Cicilan">
+          <Calendar size={20} />
+        </button>
+        <button className={`rail-item ${activeTab === 'analytics' ? 'active' : ''}`} onClick={() => setActiveTab('analytics')} title="Analisis & Ekspor">
+          <TrendingUp size={20} />
+        </button>
+        <button className="rail-item" onClick={() => setIsProfileOpen(true)} title="Profil" style={{ marginTop: 'auto' }}>
+          <User size={20} />
+        </button>
       </aside>
 
       {/* Main Content Area */}
       <main className="main-content">
-        {/* Tab 1: Dashboard */}
+        {/* Tab 1: Dashboard (3-Row Layout Matching Mockup) */}
         {activeTab === 'dashboard' && (
-          <div>
-             {/* Summary Cards */}
-            <div className="dashboard-summary">
-              <div className="card summary-card">
-                <span className="summary-label">
-                  <Wallet size={16} style={{ marginRight: '0.25rem', verticalAlign: 'middle', color: 'var(--accent-color)' }} />
-                  Total Saldo
-                </span>
-                <span className="summary-value">{formatIDR(balance)}</span>
+          <div className="dashboard-v2-container">
+            {/* ROW 1: 3 Summary Cards */}
+            <div className="dashboard-row-1">
+              {/* Card 1: Total Balance */}
+              <div className="card" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', fontWeight: 500 }}>Total Balance</span>
+                <div style={{ margin: '0.5rem 0' }}>
+                  <h2 style={{ fontSize: '2rem', fontWeight: 800, color: '#fff', margin: 0, letterSpacing: '-0.02em' }}>
+                    {formatIDR(balance)}
+                  </h2>
+                </div>
+                <div>
+                  <span className="badge-green-trend">
+                    <TrendingUp size={12} /> +2.4% vs last month
+                  </span>
+                </div>
               </div>
-              <div className="card summary-card">
-                <span className="summary-label">
-                  <Wallet size={16} style={{ marginRight: '0.25rem', verticalAlign: 'middle', color: '#f59e0b' }} />
-                  Saldo Cash
-                </span>
-                <span className="summary-value" style={{ color: '#f59e0b' }}>{formatIDR(cashBalance)}</span>
+
+              {/* Card 2: Current Month Summary */}
+              <div className="card" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', fontWeight: 500 }}>Current Month</span>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.5rem', marginTop: '0.5rem' }}>
+                  <div>
+                    <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', display: 'block' }}>Income</span>
+                    <strong style={{ fontSize: '1rem', color: 'var(--income-color)' }}>{formatIDR(paydayIncome)}</strong>
+                  </div>
+                  <div>
+                    <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', display: 'block' }}>Expenses</span>
+                    <strong style={{ fontSize: '1rem', color: 'var(--expense-color)' }}>{formatIDR(paydayExpense)}</strong>
+                  </div>
+                  <div>
+                    <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', display: 'block' }}>Saved</span>
+                    <strong style={{ fontSize: '1rem', color: 'var(--saving-color)' }}>{formatIDR(currentSaved)}</strong>
+                  </div>
+                </div>
               </div>
-              <div className="card summary-card">
-                <span className="summary-label">
-                  <CreditCard size={16} style={{ marginRight: '0.25rem', verticalAlign: 'middle', color: '#10b981' }} />
-                  Saldo Cashless
-                </span>
-                <span className="summary-value" style={{ color: '#10b981' }}>{formatIDR(cashlessBalance)}</span>
-              </div>
-              <div className="card summary-card">
-                <span className="summary-label">
-                  <ArrowUpCircle size={16} style={{ marginRight: '0.25rem', verticalAlign: 'middle', color: 'var(--income-color)' }} />
-                  Masuk (Siklus Tgl {profile?.payday_date || 1})
-                </span>
-                <span className="summary-value income">{formatIDR(paydayIncome)}</span>
-              </div>
-              <div className="card summary-card">
-                <span className="summary-label">
-                  <ArrowDownCircle size={16} style={{ marginRight: '0.25rem', verticalAlign: 'middle', color: 'var(--expense-color)' }} />
-                  Keluar (Siklus Tgl {profile?.payday_date || 1})
-                </span>
-                <span className="summary-value expense">{formatIDR(paydayExpense)}</span>
-              </div>
-              <div className="card summary-card">
-                <span className="summary-label">
-                  <PiggyBank size={16} style={{ marginRight: '0.25rem', verticalAlign: 'middle', color: 'var(--saving-color)' }} />
-                  Tabungan
-                </span>
-                <span className="summary-value saving">{formatIDR(currentSaved)}</span>
+
+              {/* Card 3: Quick Actions */}
+              <div className="card" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', fontWeight: 500 }}>Quick Actions</span>
+                  <MoreHorizontal size={16} color="var(--text-secondary)" />
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.4rem', marginTop: '0.5rem' }}>
+                  <button onClick={() => setActiveTab('transactions')} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.25rem', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border-color)', padding: '0.6rem 0.25rem', borderRadius: '8px', color: '#fff', fontSize: '0.7rem', cursor: 'pointer' }}>
+                    <Plus size={16} color="#10b981" />
+                    <span>Add Tx</span>
+                  </button>
+                  <button onClick={() => setActiveTab('transactions')} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.25rem', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border-color)', padding: '0.6rem 0.25rem', borderRadius: '8px', color: '#fff', fontSize: '0.7rem', cursor: 'pointer' }}>
+                    <Send size={16} color="#06b6d4" />
+                    <span>Send Money</span>
+                  </button>
+                  <button onClick={() => setActiveTab('reminders')} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.25rem', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border-color)', padding: '0.6rem 0.25rem', borderRadius: '8px', color: '#fff', fontSize: '0.7rem', cursor: 'pointer' }}>
+                    <CreditCard size={16} color="#f97316" />
+                    <span>Pay Bills</span>
+                  </button>
+                </div>
               </div>
             </div>
 
-            <DashboardCharts transactions={transactions} paydayDate={profile?.payday_date || 1} />
-            <div style={{ marginTop: '1.5rem' }}>
+            {/* ROW 2: Interactive Combo Chart & Recent Transactions */}
+            <div className="dashboard-row-2">
+              <DashboardCharts transactions={transactions} paydayDate={profile?.payday_date || 1} formatIDR={formatIDR} />
+
+              {/* Recent Transactions Box */}
+              <div className="card" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                  <h3 style={{ fontSize: '1.1rem', fontWeight: 600, color: 'var(--text-primary)', margin: 0 }}>Recent Transactions</h3>
+                  <MoreHorizontal size={16} color="var(--text-secondary)" />
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', flex: 1, overflowY: 'auto' }}>
+                  {transactions.slice(0, 5).length === 0 ? (
+                    <div className="empty-state">Belum ada transaksi.</div>
+                  ) : (
+                    transactions.slice(0, 5).map(tx => (
+                      <div key={tx.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(255,255,255,0.02)', padding: '0.6rem 0.75rem', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.04)' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', minWidth: 0 }}>
+                          <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: tx.type === 'income' ? 'rgba(16,185,129,0.15)' : 'rgba(239,68,68,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                            {tx.type === 'income' ? <ArrowUpCircle size={16} color="#10b981" /> : <ArrowDownCircle size={16} color="#ef4444" />}
+                          </div>
+                          <div style={{ minWidth: 0 }}>
+                            <span style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#fff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{tx.title}</span>
+                            <span style={{ display: 'block', fontSize: '0.7rem', color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{tx.category} • {tx.date}</span>
+                          </div>
+                        </div>
+                        <span style={{ fontSize: '0.85rem', fontWeight: 700, color: tx.type === 'income' ? 'var(--income-color)' : 'var(--expense-color)', whiteSpace: 'nowrap', marginLeft: '0.5rem' }}>
+                          {tx.type === 'income' ? '+' : '-'} {formatIDR(tx.amount)}
+                        </span>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* ROW 3: Budget Overview & Quick Shortcuts */}
+            <div className="dashboard-row-3">
+              <BudgetOverview transactions={transactions} formatIDR={formatIDR} />
+
+              {/* Quick Action Shortcuts Box */}
+              <div className="card" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                  <h3 style={{ fontSize: '1.1rem', fontWeight: 600, color: 'var(--text-primary)', margin: 0 }}>Quick Actions</h3>
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', flex: 1, justifyContent: 'center' }}>
+                  <button className="action-tile-btn" onClick={() => setActiveTab('transactions')}>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <Plus size={16} color="#10b981" /> Add Transaction
+                    </span>
+                    <ChevronRight size={16} color="var(--text-secondary)" />
+                  </button>
+
+                  <button className="action-tile-btn" onClick={() => setActiveTab('transactions')}>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <Send size={16} color="#06b6d4" /> Send Money
+                    </span>
+                    <ChevronRight size={16} color="var(--text-secondary)" />
+                  </button>
+
+                  <button className="action-tile-btn" onClick={() => setActiveTab('reminders')}>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <CreditCard size={16} color="#f97316" /> Pay Bills
+                    </span>
+                    <ChevronRight size={16} color="var(--text-secondary)" />
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Wallet Manager */}
+            <div style={{ marginTop: '0.5rem' }}>
               <WalletManager 
                 wallets={walletsWithUpdatedBalances} 
                 fetchUserData={fetchUserData} 
