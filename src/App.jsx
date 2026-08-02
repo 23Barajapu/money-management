@@ -187,6 +187,52 @@ export default function App() {
     }
   };
 
+  // Auto-credit daily SeaBank interest on new day login
+  useEffect(() => {
+    if (!session || wallets.length === 0) return;
+
+    const checkSeaBankAutoInterest = async () => {
+      const seaBankW = wallets.find(w => w.name.toLowerCase().includes('seabank'));
+      if (!seaBankW || seaBankW.balance <= 0) return;
+
+      const todayStr = new Date().toISOString().split('T')[0];
+      const lastInterestKey = `seabank_last_interest_${session.user.id}_${seaBankW.id}`;
+      const lastLoggedDate = localStorage.getItem(lastInterestKey);
+
+      if (lastLoggedDate !== todayStr) {
+        const bal = parseFloat(seaBankW.balance);
+        const gross = bal <= 150000000 
+          ? (bal * 0.025) / 365 
+          : ((150000000 * 0.025) + (bal - 150000000) * 0.035) / 365;
+        const netDaily = Math.round(gross * (bal > 7500000 ? 0.8 : 1));
+
+        if (netDaily > 0) {
+          try {
+            const newTx = {
+              id: Date.now().toString(),
+              user_id: session.user.id,
+              type: 'income',
+              title: 'Bunga Harian SeaBank (Otomatis)',
+              amount: netDaily,
+              category: 'Lainnya',
+              date: todayStr,
+              payment_method: seaBankW.id
+            };
+
+            await supabase.from('transactions').insert(newTx);
+            localStorage.setItem(lastInterestKey, todayStr);
+            showToast(`Bunga harian SeaBank sebesar ${formatIDR(netDaily)} otomatis cair ke saldo!`, 'success');
+            fetchUserData();
+          } catch (e) {
+            console.error('Error auto adding SeaBank interest:', e);
+          }
+        }
+      }
+    };
+
+    checkSeaBankAutoInterest();
+  }, [session, wallets]);
+
   // Helper to check if a date is within current payday cycle
   const isDateInCurrentPaydayCycle = (dateStr, pDate = 1) => {
     const txDate = new Date(dateStr);
