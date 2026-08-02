@@ -206,14 +206,24 @@ export default function App() {
           : ((150000000 * 0.025) + (bal - 150000000) * 0.035) / 365;
         const netDaily = Math.round(gross * (bal > 7500000 ? 0.8 : 1));
 
-        if (netDaily > 0) {
+        let daysDiff = 1;
+        if (lastLoggedDate) {
+          const lastD = new Date(lastLoggedDate);
+          const todayD = new Date(todayStr);
+          const diffMs = todayD - lastD;
+          daysDiff = Math.max(1, Math.floor(diffMs / (1000 * 60 * 60 * 24)));
+        }
+
+        const totalNet = netDaily * daysDiff;
+
+        if (totalNet > 0) {
           try {
             const newTx = {
               id: Date.now().toString(),
               user_id: session.user.id,
               type: 'income',
-              title: 'Bunga Harian SeaBank (Otomatis)',
-              amount: netDaily,
+              title: daysDiff > 1 ? `Bunga Akumulasi SeaBank (${daysDiff} Hari)` : 'Bunga Harian SeaBank (Otomatis)',
+              amount: totalNet,
               category: 'Lainnya',
               date: todayStr,
               payment_method: seaBankW.id
@@ -221,7 +231,7 @@ export default function App() {
 
             await supabase.from('transactions').insert(newTx);
             localStorage.setItem(lastInterestKey, todayStr);
-            showToast(`Bunga harian SeaBank sebesar ${formatIDR(netDaily)} otomatis cair ke saldo!`, 'success');
+            showToast(`Bunga SeaBank ${daysDiff > 1 ? `${daysDiff} hari (${formatIDR(totalNet)})` : formatIDR(totalNet)} otomatis cair ke saldo!`, 'success');
             fetchUserData();
           } catch (e) {
             console.error('Error auto adding SeaBank interest:', e);
