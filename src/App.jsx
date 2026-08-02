@@ -37,6 +37,7 @@ import Toast from './components/Toast';
 import ConfirmModal from './components/ConfirmModal';
 import Auth from './components/Auth';
 import { getTranslation, getDeviceLanguage } from './utils/i18n';
+import SeaBankInterestCalculator from './components/SeaBankInterestCalculator';
 
 export default function App() {
   const [session, setSession] = useState(null);
@@ -935,7 +936,7 @@ export default function App() {
 
         {/* Tab 3: Savings & Budgets */}
         {activeTab === 'savings' && (
-          <div style={{ maxWidth: '800px', margin: '0 auto' }}>
+          <div style={{ maxWidth: '800px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
             <BudgetAndSavings 
               transactions={transactions} 
               formatIDR={formatIDR} 
@@ -943,6 +944,13 @@ export default function App() {
               showToast={showToast}
               showConfirm={showConfirm}
               currency={currency}
+            />
+            <SeaBankInterestCalculator 
+              formatIDR={formatIDR} 
+              wallets={walletsWithUpdatedBalances} 
+              onAddTransaction={handleAddTransaction} 
+              showToast={showToast} 
+              currency={currency} 
             />
           </div>
         )}

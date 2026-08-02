@@ -115,22 +115,48 @@ export default function WalletManager({ wallets, fetchUserData, formatIDR, showT
 
       {/* Daftar Dompet */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
-        {wallets.map(w => (
-          <div key={w.id} style={{ background: 'rgba(255,255,255,0.02)', padding: '1rem', borderRadius: '0.75rem', border: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <div>
-              <h4 style={{ margin: 0, fontWeight: 600 }}>{w.name}</h4>
-              <span style={{ fontSize: '0.75rem', color: w.type === 'cash' ? '#f59e0b' : '#10b981', textTransform: 'capitalize' }}>
-                {w.type === 'cash' ? 'Cash' : 'Cashless'}
-              </span>
-              <div style={{ fontWeight: 700, marginTop: '0.25rem', fontSize: '0.95rem' }}>{formatIDR(w.balance)}</div>
+        {wallets.map(w => {
+          const isSeaBank = w.name.toLowerCase().includes('seabank');
+          const rateText = w.balance >= 150000000 ? '3,5% p.a.' : '2,5% p.a.';
+          
+          let dailyNet = 0;
+          if (isSeaBank && w.balance > 0) {
+            const gross = w.balance <= 150000000 
+              ? (w.balance * 0.025) / 365 
+              : ((150000000 * 0.025) + (w.balance - 150000000) * 0.035) / 365;
+            dailyNet = Math.round(gross * (w.balance > 7500000 ? 0.8 : 1));
+          }
+
+          return (
+            <div key={w.id} style={{ background: isSeaBank ? 'rgba(6, 182, 212, 0.04)' : 'rgba(255,255,255,0.02)', padding: '1rem', borderRadius: '0.75rem', border: `1px solid ${isSeaBank ? 'rgba(6, 182, 212, 0.25)' : 'var(--border-color)'}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                  <h4 style={{ margin: 0, fontWeight: 600 }}>{w.name}</h4>
+                  {isSeaBank && (
+                    <span style={{ fontSize: '0.65rem', background: 'rgba(6, 182, 212, 0.15)', color: '#06b6d4', padding: '0.1rem 0.4rem', borderRadius: '4px', fontWeight: 700 }}>
+                      SeaBank {rateText}
+                    </span>
+                  )}
+                </div>
+                <span style={{ fontSize: '0.75rem', color: w.type === 'cash' ? '#f59e0b' : '#10b981', textTransform: 'capitalize' }}>
+                  {w.type === 'cash' ? 'Cash' : 'Cashless'}
+                </span>
+                <div style={{ fontWeight: 700, marginTop: '0.25rem', fontSize: '0.95rem' }}>{formatIDR(w.balance)}</div>
+                
+                {isSeaBank && dailyNet > 0 && (
+                  <span style={{ fontSize: '0.7rem', color: '#10b981', display: 'block', marginTop: '0.2rem', fontWeight: 600 }}>
+                    +{formatIDR(dailyNet)} / hari (Bunga Cair)
+                  </span>
+                )}
+              </div>
+              {(w.name !== 'Dompet Cash' && w.name !== 'Rekening Bank') && (
+                <button onClick={() => handleDeleteWallet(w.id, w.name)} className="btn-delete">
+                  <Trash2 size={14} />
+                </button>
+              )}
             </div>
-            {(w.name !== 'Dompet Cash' && w.name !== 'Rekening Bank') && (
-              <button onClick={() => handleDeleteWallet(w.id, w.name)} className="btn-delete">
-                <Trash2 size={14} />
-              </button>
-            )}
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
