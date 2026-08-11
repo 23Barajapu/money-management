@@ -11,6 +11,7 @@ export default function BudgetAndSavings({ transactions, formatIDR, paydayDate =
   // Form states
   const [budgetCategory, setBudgetCategory] = useState('Makanan');
   const [goalName, setGoalName] = useState('');
+  const [goalTargetDate, setGoalTargetDate] = useState('');
 
   // Auto-format hooks for nominal inputs
   const { displayValue: budgetLimitDisplay, rawValue: budgetLimitRaw, handleChange: handleBudgetLimitChange, handleBlur: handleBudgetLimitBlur, reset: resetBudgetLimit } = useCurrencyInput(currency);
@@ -124,13 +125,15 @@ export default function BudgetAndSavings({ transactions, formatIDR, paydayDate =
         user_id: user.id,
         goal_name: goalName,
         goal_amount: parseFloat(goalAmountRaw),
-        current_saved: parseFloat(goalSavedRaw || '0')
+        current_saved: parseFloat(goalSavedRaw || '0'),
+        target_date: goalTargetDate || null
       };
 
       const { error } = await supabase.from('savings_goals').insert(newGoal);
       if (error) throw error;
 
       setGoalName('');
+      setGoalTargetDate('');
       resetGoalAmount();
       resetGoalSaved();
       setGoalSavedValue(0);
@@ -292,6 +295,14 @@ export default function BudgetAndSavings({ transactions, formatIDR, paydayDate =
               onBlur={handleGoalSavedBlur}
             />
           </div>
+          <div className="form-group" style={{ marginBottom: 0 }}>
+            <label>Target Deadline (Opsional)</label>
+            <input 
+              type="date" 
+              value={goalTargetDate} 
+              onChange={(e) => setGoalTargetDate(e.target.value)} 
+            />
+          </div>
           <button type="submit" className="btn-submit" style={{ padding: '0.75rem 1rem', width: 'auto', whiteSpace: 'nowrap' }}>
             <Plus size={16} /> Buat Target
           </button>
@@ -303,14 +314,49 @@ export default function BudgetAndSavings({ transactions, formatIDR, paydayDate =
           ) : (
             goals.map(g => {
               const percent = Math.min(100, (g.current_saved / g.goal_amount) * 100);
+              
+              let deadlineInfo = null;
+              if (g.target_date) {
+                const today = new Date();
+                today.setHours(0,0,0,0);
+                const target = new Date(g.target_date);
+                const diffDays = Math.ceil((target - today) / (1000 * 60 * 60 * 24));
+                const diffMonths = Math.max(1, Math.ceil(diffDays / 30.44));
+                const remainingAmount = Math.max(0, g.goal_amount - g.current_saved);
+
+                if (diffDays <= 0) {
+                  deadlineInfo = <span style={{ color: 'var(--expense-color)', fontSize: '0.75rem' }}>⚠️ Deadline Terlewat</span>;
+                } else if (remainingAmount <= 0) {
+                  deadlineInfo = <span style={{ color: 'var(--income-color)', fontSize: '0.75rem' }}>🎉 Target Terpenuhi!</span>;
+                } else {
+                  const monthlyEstimate = remainingAmount / diffMonths;
+                  deadlineInfo = (
+                    <span style={{ fontSize: '0.75rem', color: 'var(--accent-color)' }}>
+                      📅 Deadline: {g.target_date} ({diffDays} hari) • Estimasi: {formatIDR(monthlyEstimate)}/bln
+                    </span>
+                  );
+                }
+              }
+
+              const handleCustomUpdatePrompt = (isDeposit) => {
+                const input = prompt(`Masukkan nominal ${isDeposit ? 'setoran' : 'penarikan'} (${currencyLabel}):`);
+                if (!input) return;
+                const num = parseFloat(input.replace(/[^0-9.]/g, ''));
+                if (isNaN(num) || num <= 0) return;
+                handleUpdateSaved(g, isDeposit ? num : -num);
+              };
+
               return (
                 <div key={g.id} style={{ background: 'rgba(255,255,255,0.02)', padding: '1.25rem', borderRadius: '0.75rem', border: '1px solid var(--border-color)' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.5rem' }}>
                     <div>
                       <h4 style={{ fontWeight: 600, fontSize: '1rem', margin: 0 }}>{g.goal_name}</h4>
-                      <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-                        Progres: {percent.toFixed(1)}%
-                      </span>
+                      <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', marginTop: '0.25rem' }}>
+                        <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                          Progres: {percent.toFixed(1)}%
+                        </span>
+                        {deadlineInfo}
+                      </div>
                     </div>
                     <button onClick={() => handleDeleteGoal(g)} className="btn-delete" style={{ padding: '0.25rem' }}>
                       <Trash2 size={14} />
@@ -325,14 +371,15 @@ export default function BudgetAndSavings({ transactions, formatIDR, paydayDate =
                       transition: 'width 0.3s ease'
                     }}></div>
                   </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
                     <span style={{ fontSize: '0.9rem', fontWeight: 600 }}>
                       {formatIDR(g.current_saved)} / {formatIDR(g.goal_amount)}
                     </span>
-                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                    <div style={{ display: 'flex', gap: '0.35rem' }}>
                       <button 
                         onClick={() => handleUpdateSaved(g, -50000)}
                         className="btn-delete" 
+                        title="Tarik 50k"
                         style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.75rem', padding: '0.35rem 0.5rem', background: 'rgba(239, 68, 68, 0.1)', color: 'var(--expense-color)', border: 'none' }}
                       >
                         <ArrowDownLeft size={12} /> -50k
@@ -340,9 +387,18 @@ export default function BudgetAndSavings({ transactions, formatIDR, paydayDate =
                       <button 
                         onClick={() => handleUpdateSaved(g, 50000)}
                         className="btn-submit" 
+                        title="Setor 50k"
                         style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.75rem', padding: '0.35rem 0.5rem', width: 'auto', background: 'rgba(16, 185, 129, 0.1)', color: 'var(--income-color)', border: 'none' }}
                       >
                         <ArrowUpRight size={12} /> +50k
+                      </button>
+                      <button 
+                        onClick={() => handleCustomUpdatePrompt(true)}
+                        className="btn-submit" 
+                        title="Setor nominal custom"
+                        style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.75rem', padding: '0.35rem 0.5rem', width: 'auto', background: 'var(--border-color)', color: 'var(--text-primary)', border: 'none' }}
+                      >
+                        + Custom
                       </button>
                     </div>
                   </div>

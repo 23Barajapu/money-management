@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Percent, TrendingUp, Info, ShieldCheck, DollarSign, Calendar, ChevronRight, CheckCircle2, Award } from 'lucide-react';
+import { Percent, TrendingUp, Info, ShieldCheck, DollarSign, Calendar, ChevronRight, CheckCircle2, Award, Plus } from 'lucide-react';
 import { useCurrencyInput } from '../hooks/useCurrencyInput';
 
 export default function SeaBankInterestCalculator({ formatIDR, wallets = [], onAddTransaction, showToast, currency = 'IDR' }) {
