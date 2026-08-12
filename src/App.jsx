@@ -627,6 +627,12 @@ export default function App() {
     });
   }, [transactions, filter]);
 
+  const userAvatarUrl = useMemo(() => {
+    const oauthAvatar = session?.user?.user_metadata?.avatar_url || session?.user?.user_metadata?.picture;
+    const customAvatar = profile?.avatar_url || session?.user?.user_metadata?.custom_avatar_url;
+    return customAvatar || oauthAvatar || null;
+  }, [session, profile]);
+
   if (loading) {
     return (
       <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh' }}>
@@ -634,12 +640,6 @@ export default function App() {
       </div>
     );
   }
-
-  const userAvatarUrl = useMemo(() => {
-    const oauthAvatar = session?.user?.user_metadata?.avatar_url || session?.user?.user_metadata?.picture;
-    const customAvatar = profile?.avatar_url || session?.user?.user_metadata?.custom_avatar_url;
-    return customAvatar || oauthAvatar || null;
-  }, [session, profile]);
 
   return (
     <div className="app-wrapper">
