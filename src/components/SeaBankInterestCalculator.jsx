@@ -263,7 +263,6 @@ export default function SeaBankInterestCalculator({ formatIDR, wallets = [], onA
           </span>
         </div>
       </div>
-
     </div>
   );
 }
