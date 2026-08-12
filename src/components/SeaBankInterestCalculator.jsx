@@ -253,24 +253,15 @@ export default function SeaBankInterestCalculator({ formatIDR, wallets = [], onA
       </div>
 
       {/* Tax & Info Footnote */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(255, 255, 255, 0.02)', padding: '0.65rem 0.85rem', borderRadius: '8px', border: '1px solid rgba(255, 255, 255, 0.04)', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+      <div style={{ background: 'rgba(255, 255, 255, 0.02)', padding: '0.65rem 0.85rem', borderRadius: '8px', border: '1px solid rgba(255, 255, 255, 0.04)', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
           <Info size={14} color="#06b6d4" />
           <span>
             {calculation.isTaxed 
-              ? 'Saldo > Rp 7.5jt dikenakan pajak PPh bunga 20% otomatis.' 
-              : 'Saldo ≤ Rp 7.5jt bebas pajak PPh bunga.'}
+              ? 'Saldo > Rp 7.5jt dikenakan pajak PPh bunga 20% (bunga cair otomatis tiap hari baru saat login).' 
+              : 'Saldo ≤ Rp 7.5jt bebas pajak PPh bunga (bunga cair otomatis tiap hari baru saat login).'}
           </span>
         </div>
-
-        {calculation.netDaily > 0 && (
-          <button
-            onClick={handleClaimInterest}
-            style={{ background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', color: '#0b0f19', border: 'none', padding: '0.35rem 0.75rem', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.3rem', whiteSpace: 'nowrap' }}
-          >
-            <Plus size={13} /> Catat Bunga Harian
-          </button>
-        )}
       </div>
 
     </div>
