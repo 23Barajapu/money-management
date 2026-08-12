@@ -641,6 +641,10 @@ export default function App() {
     );
   }
 
+  if (!session) {
+    return <Auth initialMessage={logoutMessage} />;
+  }
+
   return (
     <div className="app-wrapper">
       {/* Top Header Bar */}
