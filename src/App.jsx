@@ -635,9 +635,11 @@ export default function App() {
     );
   }
 
-  if (!session) {
-    return <Auth initialMessage={logoutMessage} />;
-  }
+  const userAvatarUrl = useMemo(() => {
+    const oauthAvatar = session?.user?.user_metadata?.avatar_url || session?.user?.user_metadata?.picture;
+    const customAvatar = profile?.avatar_url || session?.user?.user_metadata?.custom_avatar_url;
+    return customAvatar || oauthAvatar || null;
+  }, [session, profile]);
 
   return (
     <div className="app-wrapper">
