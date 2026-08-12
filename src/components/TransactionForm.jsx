@@ -1,13 +1,22 @@
 import React, { useState, useEffect } from 'react';
 import { useCurrencyInput } from '../hooks/useCurrencyInput';
 
-export default function TransactionForm({ onAddTransaction, wallets = [], currency = 'IDR' }) {
-  const [type, setType] = useState('income'); // 'income', 'expense', or 'transfer'
+export default function TransactionForm({ onAddTransaction, wallets = [], currency = 'IDR', initialType = 'income' }) {
+  const [type, setType] = useState(initialType); // 'income', 'expense', or 'transfer'
   const [title, setTitle] = useState('');
   const [category, setCategory] = useState('');
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [paymentMethod, setPaymentMethod] = useState('');
   const [destinationWalletId, setDestinationWalletId] = useState('');
+
+  useEffect(() => {
+    if (initialType) {
+      setType(initialType);
+      if (initialType === 'income') setCategory('Gaji Utama');
+      else if (initialType === 'expense') setCategory('Makanan Dasar');
+      else if (initialType === 'transfer') setCategory('Transfer');
+    }
+  }, [initialType]);
 
   const { displayValue, rawValue, handleChange: handleAmountChange, handleBlur: handleAmountBlur, reset: resetAmount } = useCurrencyInput(currency);
 

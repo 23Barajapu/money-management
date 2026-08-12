@@ -52,6 +52,7 @@ export default function App() {
   const [langOption, setLangOption] = useState('auto');
   const [searchQuery, setSearchQuery] = useState('');
   const [bills, setBills] = useState([]);
+  const [selectedFormType, setSelectedFormType] = useState('income');
   const [showNotifMenu, setShowNotifMenu] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [profile, setProfile] = useState({ payday_date: 1, email_notif: true, push_notif: true });
@@ -834,17 +835,17 @@ export default function App() {
                   <MoreHorizontal size={16} color="var(--text-secondary)" />
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.4rem', marginTop: '0.5rem' }}>
-                  <button onClick={() => setActiveTab('transactions')} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.25rem', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border-color)', padding: '0.6rem 0.25rem', borderRadius: '8px', color: '#fff', fontSize: '0.7rem', cursor: 'pointer' }}>
+                  <button onClick={() => { setSelectedFormType('income'); setActiveTab('transactions'); }} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.25rem', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border-color)', padding: '0.6rem 0.25rem', borderRadius: '8px', color: '#fff', fontSize: '0.7rem', cursor: 'pointer' }}>
                     <Plus size={16} color="#10b981" />
-                    <span>{t('addTx')}</span>
+                    <span>Pemasukan</span>
                   </button>
-                  <button onClick={() => setActiveTab('transactions')} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.25rem', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border-color)', padding: '0.6rem 0.25rem', borderRadius: '8px', color: '#fff', fontSize: '0.7rem', cursor: 'pointer' }}>
+                  <button onClick={() => { setSelectedFormType('expense'); setActiveTab('transactions'); }} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.25rem', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border-color)', padding: '0.6rem 0.25rem', borderRadius: '8px', color: '#fff', fontSize: '0.7rem', cursor: 'pointer' }}>
+                    <ArrowDownCircle size={16} color="#ef4444" />
+                    <span>Pengeluaran</span>
+                  </button>
+                  <button onClick={() => { setSelectedFormType('transfer'); setActiveTab('transactions'); }} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.25rem', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border-color)', padding: '0.6rem 0.25rem', borderRadius: '8px', color: '#fff', fontSize: '0.7rem', cursor: 'pointer' }}>
                     <Send size={16} color="#06b6d4" />
-                    <span>{t('sendMoney')}</span>
-                  </button>
-                  <button onClick={() => setActiveTab('reminders')} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.25rem', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border-color)', padding: '0.6rem 0.25rem', borderRadius: '8px', color: '#fff', fontSize: '0.7rem', cursor: 'pointer' }}>
-                    <CreditCard size={16} color="#f97316" />
-                    <span>{t('payBills')}</span>
+                    <span>Transfer</span>
                   </button>
                 </div>
               </div>
@@ -914,7 +915,7 @@ export default function App() {
         {/* Tab 2: Transactions */}
         {activeTab === 'transactions' && (
           <div className="main-grid" style={{ gridTemplateColumns: '1fr' }}>
-            <TransactionForm onAddTransaction={handleAddTransaction} wallets={walletsWithUpdatedBalances} currency={currency} />
+            <TransactionForm onAddTransaction={handleAddTransaction} wallets={walletsWithUpdatedBalances} currency={currency} initialType={selectedFormType} />
             
             <div className="card">
               <div className="list-header">
