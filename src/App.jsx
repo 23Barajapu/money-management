@@ -888,7 +888,13 @@ export default function App() {
 
             {/* ROW 3: Budget Overview & Quick Shortcuts */}
             <div className="dashboard-row-3">
-              <BudgetOverview transactions={transactions} formatIDR={formatIDR} />
+              <BudgetOverview 
+                transactions={transactions} 
+                formatIDR={formatIDR} 
+                monthlyIncome={profile?.monthly_income}
+                paydayDate={paydayDate}
+                currency={currency}
+              />
 
               {/* Quick Action Shortcuts Box */}
               <div className="card" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
