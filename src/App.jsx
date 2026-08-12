@@ -886,8 +886,8 @@ export default function App() {
               </div>
             </div>
 
-            {/* ROW 3: Budget Overview & Quick Shortcuts */}
-            <div className="dashboard-row-3">
+            {/* ROW 3: Budget Overview (Alokasi Keuangan 50-5-30-15) */}
+            <div style={{ marginBottom: '1.5rem' }}>
               <BudgetOverview 
                 transactions={transactions} 
                 formatIDR={formatIDR} 
@@ -895,36 +895,6 @@ export default function App() {
                 paydayDate={profile?.payday_date || 1}
                 currency={currency}
               />
-
-              {/* Quick Action Shortcuts Box */}
-              <div className="card" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                  <h3 style={{ fontSize: '1.1rem', fontWeight: 600, color: 'var(--text-primary)', margin: 0 }}>Quick Actions</h3>
-                </div>
-
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', flex: 1, justifyContent: 'center' }}>
-                  <button className="action-tile-btn" onClick={() => setActiveTab('transactions')}>
-                    <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                      <Plus size={16} color="#10b981" /> Add Transaction
-                    </span>
-                    <ChevronRight size={16} color="var(--text-secondary)" />
-                  </button>
-
-                  <button className="action-tile-btn" onClick={() => setActiveTab('transactions')}>
-                    <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                      <Send size={16} color="#06b6d4" /> Send Money
-                    </span>
-                    <ChevronRight size={16} color="var(--text-secondary)" />
-                  </button>
-
-                  <button className="action-tile-btn" onClick={() => setActiveTab('reminders')}>
-                    <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                      <CreditCard size={16} color="#f97316" /> Pay Bills
-                    </span>
-                    <ChevronRight size={16} color="var(--text-secondary)" />
-                  </button>
-                </div>
-              </div>
             </div>
 
             {/* Wallet Manager */}
