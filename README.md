@@ -71,4 +71,3 @@ Aplikasi catatan keuangan pribadi berbasis React, Vite, dan Supabase. Bisa catat
 | Icons | Lucide React |
 
 ---
-
