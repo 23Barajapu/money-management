@@ -3,7 +3,7 @@ import { supabase } from '../supabaseClient';
 import { User, Shield, CreditCard, Bell, X, Check, Key, DollarSign, Upload, Trash2 } from 'lucide-react';
 import { useCurrencyInput } from '../hooks/useCurrencyInput';
 
-export default function ProfileModal({ isOpen, onClose, profile, setProfile, currency, setCurrency, showToast, showConfirm }) {
+export default function ProfileModal({ isOpen, onClose, profile, setProfile, currency, setCurrency, rates = {}, showToast, showConfirm }) {
   const [activeTab, setActiveTab] = useState('account');
   const [paydayDate, setPaydayDate] = useState(1);
   const [emailNotif, setEmailNotif] = useState(true);
@@ -26,11 +26,13 @@ export default function ProfileModal({ isOpen, onClose, profile, setProfile, cur
         const currentPic = profile?.avatar_url || user.user_metadata?.custom_avatar_url || user.user_metadata?.avatar_url || user.user_metadata?.picture || '';
         setAvatarUrl(currentPic);
 
+        // Income selalu disimpan IDR, konversi ke currency aktif untuk display
+        const toDisplayRate = currency === 'IDR' ? 1 : (rates[currency] || 1);
         const savedIncome = localStorage.getItem(`user_monthly_income_${user.id}`);
         if (savedIncome !== null && savedIncome !== undefined) {
-          setIncomeValue(parseFloat(savedIncome));
+          setIncomeValue(parseFloat(savedIncome) * toDisplayRate);
         } else if (profile && profile.monthly_income !== undefined) {
-          setIncomeValue(profile.monthly_income || 0);
+          setIncomeValue((profile.monthly_income || 0) * toDisplayRate);
         }
       }
     });
@@ -40,9 +42,6 @@ export default function ProfileModal({ isOpen, onClose, profile, setProfile, cur
       setEmailNotif(profile.email_notif !== false);
       setPushNotif(profile.push_notif !== false);
       if (profile.avatar_url) setAvatarUrl(profile.avatar_url);
-      if (profile.monthly_income !== undefined && profile.monthly_income !== null) {
-        setIncomeValue(profile.monthly_income || 0);
-      }
     }
   }, [profile, isOpen]);
 
@@ -99,7 +98,10 @@ export default function ProfileModal({ isOpen, onClose, profile, setProfile, cur
       const user = (await supabase.auth.getUser()).data.user;
       if (!user) return;
 
-      const parsedIncome = parseFloat(incomeRaw || '0');
+      // Konversi balik ke IDR sebelum simpan (base currency)
+      const incomeInDisplayCurrency = parseFloat(incomeRaw || '0');
+      const toIDRRate = currency === 'IDR' ? 1 : (1 / (rates[currency] || 1));
+      const parsedIncome = incomeInDisplayCurrency * toIDRRate;
       const updatedProfile = {
         user_id: user.id,
         payday_date: parseInt(paydayDate),
@@ -313,7 +315,7 @@ export default function ProfileModal({ isOpen, onClose, profile, setProfile, cur
 
                   <div className="form-group" style={{ marginBottom: '1.25rem' }}>
                     <label style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                      <DollarSign size={14} color="var(--income-color)" /> Penghasilan Bersih Bulanan ({currency})
+                      <DollarSign size={14} color="var(--income-color)" /> Penghasilan Bersih Bulanan <span style={{ color: 'var(--accent-color)', fontWeight: 700 }}>({currency})</span>
                     </label>
                     <input 
                       type="text" 
@@ -325,7 +327,7 @@ export default function ProfileModal({ isOpen, onClose, profile, setProfile, cur
                       style={{ fontWeight: 600 }}
                     />
                     <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block', marginTop: '0.25rem' }}>
-                      Digunakan sebagai acuan alokasi keuangan 50-5-30-15 (Pokok, Bebas, Investasi, Darurat).
+                      Input dalam <strong>{currency}</strong> — otomatis dikonversi ke IDR saat disimpan. Acuan alokasi 50-5-30-15.
                     </span>
                   </div>
 

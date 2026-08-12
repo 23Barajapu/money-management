@@ -1091,6 +1091,7 @@ export default function App() {
         setProfile={setProfile} 
         currency={currency} 
         setCurrency={setCurrency} 
+        rates={rates}
         showToast={showToast}
         showConfirm={showConfirm}
       />
