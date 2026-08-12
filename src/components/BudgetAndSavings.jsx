@@ -19,6 +19,10 @@ export default function BudgetAndSavings({ transactions, formatIDR, paydayDate =
   const { displayValue: goalAmountDisplay, rawValue: goalAmountRaw, handleChange: handleGoalAmountChange, handleBlur: handleGoalAmountBlur, reset: resetGoalAmount } = useCurrencyInput(currency);
   const { displayValue: goalSavedDisplay, rawValue: goalSavedRaw, handleChange: handleGoalSavedChange, handleBlur: handleGoalSavedBlur, reset: resetGoalSaved, setValue: setGoalSavedValue } = useCurrencyInput(currency);
 
+  // Custom Modal Action
+  const [customAction, setCustomAction] = useState({ isOpen: false, goal: null, isDeposit: true });
+  const { displayValue: customAmountDisplay, rawValue: customAmountRaw, handleChange: handleCustomAmountChange, handleBlur: handleCustomAmountBlur, reset: resetCustomAmount } = useCurrencyInput(currency);
+
   // Transaction Category Options (matching TransactionForm 50-5-30-15)
   const categories = [
     'Makanan Dasar',
@@ -312,11 +316,8 @@ export default function BudgetAndSavings({ transactions, formatIDR, paydayDate =
               }
 
               const handleCustomUpdatePrompt = (isDeposit) => {
-                const input = prompt(`Masukkan nominal ${isDeposit ? 'setoran' : 'penarikan'} (${currencyLabel}):`);
-                if (!input) return;
-                const num = parseFloat(input.replace(/[^0-9.]/g, ''));
-                if (isNaN(num) || num <= 0) return;
-                handleUpdateSaved(g, isDeposit ? num : -num);
+                setCustomAction({ isOpen: true, goal: g, isDeposit });
+                resetCustomAmount();
               };
 
               return (
@@ -381,6 +382,54 @@ export default function BudgetAndSavings({ transactions, formatIDR, paydayDate =
           )}
         </div>
       </div>
+
+      {/* Custom Amount Modal */}
+      {customAction.isOpen && (
+        <div className="modal-overlay">
+          <div className="modal-card" style={{ maxWidth: '400px' }}>
+            <h3 style={{ margin: '0 0 1rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '1.1rem' }}>
+              <PiggyBank size={20} color={customAction.isDeposit ? 'var(--income-color)' : 'var(--expense-color)'} />
+              {customAction.isDeposit ? 'Setor ke' : 'Tarik dari'} {customAction.goal?.goal_name}
+            </h3>
+            <div className="form-group" style={{ marginBottom: '1.5rem' }}>
+              <label>Nominal ({currency})</label>
+              <input 
+                type="text" 
+                inputMode="numeric"
+                value={customAmountDisplay}
+                onChange={handleCustomAmountChange}
+                onBlur={handleCustomAmountBlur}
+                placeholder="0"
+                autoFocus
+              />
+            </div>
+            <div style={{ display: 'flex', gap: '0.75rem' }}>
+              <button 
+                className="btn-delete"
+                onClick={() => setCustomAction({ isOpen: false, goal: null, isDeposit: true })}
+                style={{ flex: 1, padding: '0.75rem', border: '1px solid var(--border-color)', background: 'transparent' }}
+              >
+                Batal
+              </button>
+              <button 
+                className="btn-submit"
+                onClick={() => {
+                  const num = parseFloat(customAmountRaw || '0');
+                  if (!isNaN(num) && num > 0) {
+                    handleUpdateSaved(customAction.goal, customAction.isDeposit ? num : -num);
+                    setCustomAction({ isOpen: false, goal: null, isDeposit: true });
+                  } else {
+                    if (showToast) showToast('Masukkan nominal yang valid', 'error');
+                  }
+                }}
+                style={{ flex: 1, padding: '0.75rem', background: customAction.isDeposit ? 'var(--income-color)' : 'var(--expense-color)' }}
+              >
+                Konfirmasi
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
