@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
-import { User, Shield, CreditCard, Bell, X, Check, Key } from 'lucide-react';
+import { User, Shield, CreditCard, Bell, X, Check, Key, DollarSign } from 'lucide-react';
+import { useCurrencyInput } from '../hooks/useCurrencyInput';
 
 export default function ProfileModal({ isOpen, onClose, profile, setProfile, currency, setCurrency, showToast, showConfirm }) {
   const [activeTab, setActiveTab] = useState('account');
@@ -9,13 +10,20 @@ export default function ProfileModal({ isOpen, onClose, profile, setProfile, cur
   const [pushNotif, setPushNotif] = useState(true);
   const [loading, setLoading] = useState(false);
   const [successMsg, setSuccessMsg] = useState('');
-
   const [email, setEmail] = useState('');
+
+  const { displayValue: incomeDisplay, rawValue: incomeRaw, handleChange: handleIncomeChange, handleBlur: handleIncomeBlur, setValue: setIncomeValue } = useCurrencyInput(currency);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (user) {
         setEmail(user.email);
+        const savedIncome = localStorage.getItem(`user_monthly_income_${user.id}`);
+        if (savedIncome !== null && savedIncome !== undefined) {
+          setIncomeValue(parseFloat(savedIncome));
+        } else if (profile && profile.monthly_income !== undefined) {
+          setIncomeValue(profile.monthly_income || 0);
+        }
       }
     });
 
@@ -23,6 +31,9 @@ export default function ProfileModal({ isOpen, onClose, profile, setProfile, cur
       setPaydayDate(profile.payday_date || 1);
       setEmailNotif(profile.email_notif !== false);
       setPushNotif(profile.push_notif !== false);
+      if (profile.monthly_income !== undefined && profile.monthly_income !== null) {
+        setIncomeValue(profile.monthly_income || 0);
+      }
     }
   }, [profile, isOpen]);
 
@@ -35,15 +46,25 @@ export default function ProfileModal({ isOpen, onClose, profile, setProfile, cur
       const user = (await supabase.auth.getUser()).data.user;
       if (!user) return;
 
+      const parsedIncome = parseFloat(incomeRaw || '0');
       const updatedProfile = {
         user_id: user.id,
         payday_date: parseInt(paydayDate),
         email_notif: emailNotif,
-        push_notif: pushNotif
+        push_notif: pushNotif,
+        monthly_income: parsedIncome
       };
 
+      localStorage.setItem(`user_monthly_income_${user.id}`, parsedIncome.toString());
+
       const { error } = await supabase.from('profiles').upsert(updatedProfile);
-      if (error) throw error;
+      if (error) {
+        // Fallback jika kolom monthly_income belum ada di database
+        delete updatedProfile.monthly_income;
+        const { error: err2 } = await supabase.from('profiles').upsert(updatedProfile);
+        if (err2) throw err2;
+        updatedProfile.monthly_income = parsedIncome;
+      }
 
       setProfile(updatedProfile);
       setSuccessMsg('Pengaturan berhasil disimpan!');
@@ -152,7 +173,25 @@ export default function ProfileModal({ isOpen, onClose, profile, setProfile, cur
               {activeTab === 'financial' && (
                 <div>
                   <h3 style={{ margin: '0 0 1rem 0', fontSize: '1rem', fontWeight: 600 }}>Preferensi Finansial</h3>
-                  
+
+                  <div className="form-group" style={{ marginBottom: '1.25rem' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                      <DollarSign size={14} color="var(--income-color)" /> Penghasilan Bersih Bulanan ({currency})
+                    </label>
+                    <input 
+                      type="text" 
+                      inputMode="numeric"
+                      placeholder="e.g. 10.000.000"
+                      value={incomeDisplay}
+                      onChange={handleIncomeChange}
+                      onBlur={handleIncomeBlur}
+                      style={{ fontWeight: 600 }}
+                    />
+                    <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block', marginTop: '0.25rem' }}>
+                      Digunakan sebagai acuan alokasi keuangan 50-5-30-15 (Pokok, Bebas, Investasi, Darurat).
+                    </span>
+                  </div>
+
                   <div className="form-group">
                     <label>Tanggal Siklus Gajian (Payday Cycle)</label>
                     <input 

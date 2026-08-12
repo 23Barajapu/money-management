@@ -167,15 +167,17 @@ export default function App() {
       }
 
       // 6. Fetch profile
+      const savedIncome = localStorage.getItem(`user_monthly_income_${userId}`);
+      const localIncome = savedIncome !== null ? parseFloat(savedIncome) : 0;
       const { data: profData, error: profErr } = await supabase
         .from('profiles')
         .select('*')
         .eq('user_id', userId)
         .maybeSingle();
       if (!profErr && profData) {
-        setProfile(profData);
+        setProfile({ ...profData, monthly_income: profData.monthly_income ?? localIncome });
       } else {
-        const defaultProfile = { user_id: userId, payday_date: 1, email_notif: true, push_notif: true };
+        const defaultProfile = { user_id: userId, payday_date: 1, email_notif: true, push_notif: true, monthly_income: localIncome };
         await supabase.from('profiles').upsert(defaultProfile);
         setProfile(defaultProfile);
       }
@@ -997,6 +999,8 @@ export default function App() {
               transactions={transactions} 
               formatIDR={formatIDR} 
               paydayDate={profile?.payday_date || 1}
+              monthlyIncome={profile?.monthly_income || 0}
+              onOpenProfile={() => setIsProfileOpen(true)}
               showToast={showToast}
               showConfirm={showConfirm}
               currency={currency}

@@ -2,14 +2,15 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
 import { PiggyBank, Target, Plus, Trash2, ArrowUpRight, ArrowDownLeft, AlertTriangle } from 'lucide-react';
 import { useCurrencyInput } from '../hooks/useCurrencyInput';
+import FinanceAllocation from './FinanceAllocation';
 
-export default function BudgetAndSavings({ transactions, formatIDR, paydayDate = 1, showToast, showConfirm, currency = 'IDR' }) {
+export default function BudgetAndSavings({ transactions, formatIDR, paydayDate = 1, monthlyIncome = 0, onOpenProfile, showToast, showConfirm, currency = 'IDR' }) {
   const [budgets, setBudgets] = useState([]);
   const [goals, setGoals] = useState([]);
   const [loading, setLoading] = useState(true);
 
   // Form states
-  const [budgetCategory, setBudgetCategory] = useState('Makanan');
+  const [budgetCategory, setBudgetCategory] = useState('Makanan Dasar');
   const [goalName, setGoalName] = useState('');
   const [goalTargetDate, setGoalTargetDate] = useState('');
 
@@ -18,8 +19,24 @@ export default function BudgetAndSavings({ transactions, formatIDR, paydayDate =
   const { displayValue: goalAmountDisplay, rawValue: goalAmountRaw, handleChange: handleGoalAmountChange, handleBlur: handleGoalAmountBlur, reset: resetGoalAmount } = useCurrencyInput(currency);
   const { displayValue: goalSavedDisplay, rawValue: goalSavedRaw, handleChange: handleGoalSavedChange, handleBlur: handleGoalSavedBlur, reset: resetGoalSaved, setValue: setGoalSavedValue } = useCurrencyInput(currency);
 
-  // Transaction Category Options (matching TransactionForm)
-  const categories = ['Makanan', 'Transportasi', 'Hiburan', 'Belanja', 'Kesehatan', 'Edukasi', 'Lainnya'];
+  // Transaction Category Options (matching TransactionForm 50-5-30-15)
+  const categories = [
+    'Makanan Dasar',
+    'Sewa & Cicilan Rumah',
+    'Utilitas & Tagihan',
+    'Transportasi',
+    'Kesehatan & Asuransi',
+    'Hiburan & Streaming',
+    'Dining Out & Jajan',
+    'Hobi & Fashion',
+    'Belanja Gaya Hidup',
+    'ETF & Saham',
+    'Obligasi & REIT',
+    'Emas & Crypto',
+    'Edukasi & Kursus',
+    'Tabungan Darurat',
+    'Lain-lain'
+  ];
 
   useEffect(() => {
     fetchData();
@@ -184,6 +201,16 @@ export default function BudgetAndSavings({ transactions, formatIDR, paydayDate =
 
   return (
     <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '1.5rem' }}>
+      {/* SECTION 0: PERSONAL FINANCE ALLOCATION (50-5-30-15) */}
+      <FinanceAllocation 
+        monthlyIncome={monthlyIncome} 
+        transactions={transactions} 
+        formatIDR={formatIDR} 
+        paydayDate={paydayDate} 
+        currency={currency} 
+        onOpenProfile={onOpenProfile} 
+      />
+
       {/* SECTION 1: BUDGET LIMITER */}
       <div className="card">
         <h2 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '1.25rem', marginBottom: '1.25rem', fontWeight: 600 }}>

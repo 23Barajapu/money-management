@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { PlusCircle, ArrowDownCircle, ArrowUpCircle, RefreshCw } from 'lucide-react';
 import { useCurrencyInput } from '../hooks/useCurrencyInput';
 
 export default function TransactionForm({ onAddTransaction, wallets = [], currency = 'IDR' }) {
@@ -51,29 +50,54 @@ export default function TransactionForm({ onAddTransaction, wallets = [], curren
   const currencyLabel = currency === 'IDR' ? 'Rp' : currency;
 
   const categories = {
-    income: ['Gaji', 'Bonus', 'Investasi', 'Lain-lain'],
-    expense: ['Makanan', 'Transportasi', 'Belanja', 'Tagihan', 'Cicilan', 'Hiburan', 'Lain-lain'],
+    income: ['Gaji Utama', 'Bonus & Tunjangan', 'Hasil Investasi', 'Bisnis / Sampingan', 'Lain-lain'],
+    expensePokok: ['Makanan Dasar', 'Sewa & Cicilan Rumah', 'Utilitas & Tagihan', 'Transportasi', 'Kesehatan & Asuransi'],
+    expenseBebas: ['Hiburan & Streaming', 'Dining Out & Jajan', 'Hobi & Fashion', 'Belanja Gaya Hidup'],
+    expenseInvestasi: ['ETF & Saham', 'Obligasi & REIT', 'Emas & Crypto', 'Edukasi & Kursus'],
+    expenseDarurat: ['Tabungan Darurat'],
+    expenseLain: ['Lain-lain']
   };
+
+  const getAllocationInfo = (cat, tType) => {
+    if (tType === 'income') {
+      return { text: 'Pemasukan — Basis Alokasi 50-5-30-15', color: 'var(--income-color)' };
+    }
+    if (tType === 'transfer') {
+      return { text: 'Transfer Saldo — Tidak Mengubah Alokasi', color: 'var(--saving-color)' };
+    }
+    if (!cat) return null;
+    const c = cat.toLowerCase();
+    if (c.includes('hiburan') || c.includes('belanja') || c.includes('dining') || c.includes('hobi') || c.includes('jajan') || c.includes('gaya')) {
+      return { text: 'Pos Alokasi: Kebutuhan Bebas (5%)', color: '#ec4899' };
+    }
+    if (c.includes('investasi') || c.includes('saham') || c.includes('etf') || c.includes('obligasi') || c.includes('reit') || c.includes('crypto') || c.includes('emas') || c.includes('edukasi') || c.includes('kursus')) {
+      return { text: 'Pos Alokasi: Investasi (30%)', color: '#10b981' };
+    }
+    if (c.includes('tabungan') || c.includes('darurat')) {
+      return { text: 'Pos Alokasi: Dana Darurat (15%)', color: '#06b6d4' };
+    }
+    return { text: 'Pos Alokasi: Kebutuhan Pokok (50%)', color: '#8b5cf6' };
+  };
+
+  const allocInfo = getAllocationInfo(category, type);
 
   return (
     <div className="card">
-      <h2 style={{ fontSize: '1.25rem', marginBottom: '1.25rem', fontWeight: 600 }}>Tambah Transaksi</h2>
+      <h2 style={{ fontSize: '1.2rem', marginBottom: '1.25rem', fontWeight: 600 }}>Tambah Transaksi</h2>
       <form onSubmit={handleSubmit}>
         <div className="btn-group">
           <button
             type="button"
             className={`btn-toggle income ${type === 'income' ? 'active' : ''}`}
-            onClick={() => { setType('income'); setCategory(''); }}
+            onClick={() => { setType('income'); setCategory('Gaji Utama'); }}
           >
-            <ArrowUpCircle size={16} style={{ marginRight: '0.25rem', verticalAlign: 'middle' }} />
             Pemasukan
           </button>
           <button
             type="button"
             className={`btn-toggle expense ${type === 'expense' ? 'active' : ''}`}
-            onClick={() => { setType('expense'); setCategory(''); }}
+            onClick={() => { setType('expense'); setCategory('Makanan Dasar'); }}
           >
-            <ArrowDownCircle size={16} style={{ marginRight: '0.25rem', verticalAlign: 'middle' }} />
             Pengeluaran
           </button>
           <button
@@ -81,7 +105,6 @@ export default function TransactionForm({ onAddTransaction, wallets = [], curren
             className={`btn-toggle transfer ${type === 'transfer' ? 'active' : ''}`}
             onClick={() => { setType('transfer'); setCategory('Transfer'); }}
           >
-            <RefreshCw size={16} style={{ marginRight: '0.25rem', verticalAlign: 'middle' }} />
             Transfer
           </button>
         </div>
@@ -90,7 +113,7 @@ export default function TransactionForm({ onAddTransaction, wallets = [], curren
           <label>Judul Transaksi</label>
           <input
             type="text"
-            placeholder={type === 'transfer' ? "e.g. Kirim Uang" : "e.g. Gaji Bulanan, Beli Kopi"}
+            placeholder={type === 'transfer' ? "e.g. Kirim Uang" : "e.g. Gaji Bulanan, Makan Siang"}
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             required
@@ -125,19 +148,63 @@ export default function TransactionForm({ onAddTransaction, wallets = [], curren
           </div>
         </div>
 
-        {type !== 'transfer' && (
+        {type === 'expense' && (
           <div className="form-group">
-            <label>Kategori</label>
+            <label>Kategori Pengeluaran (Alokasi 50-5-30-15)</label>
             <select
               value={category}
               onChange={(e) => setCategory(e.target.value)}
               required
             >
               <option value="" disabled>Pilih Kategori</option>
-              {categories[type].map((cat) => (
-                <option key={cat} value={cat}>{cat}</option>
-              ))}
+              <optgroup label="Kebutuhan Pokok (50%)">
+                {categories.expensePokok.map(c => <option key={c} value={c}>{c}</option>)}
+              </optgroup>
+              <optgroup label="Kebutuhan Bebas (5%)">
+                {categories.expenseBebas.map(c => <option key={c} value={c}>{c}</option>)}
+              </optgroup>
+              <optgroup label="Investasi (30%)">
+                {categories.expenseInvestasi.map(c => <option key={c} value={c}>{c}</option>)}
+              </optgroup>
+              <optgroup label="Dana Darurat (15%)">
+                {categories.expenseDarurat.map(c => <option key={c} value={c}>{c}</option>)}
+              </optgroup>
+              <optgroup label="Lainnya">
+                {categories.expenseLain.map(c => <option key={c} value={c}>{c}</option>)}
+              </optgroup>
             </select>
+          </div>
+        )}
+
+        {type === 'income' && (
+          <div className="form-group">
+            <label>Kategori Pemasukan</label>
+            <select
+              value={category}
+              onChange={(e) => setCategory(e.target.value)}
+              required
+            >
+              <option value="" disabled>Pilih Kategori</option>
+              {categories.income.map(c => <option key={c} value={c}>{c}</option>)}
+            </select>
+          </div>
+        )}
+
+        {allocInfo && (
+          <div style={{ 
+            marginBottom: '1rem', 
+            padding: '0.45rem 0.75rem', 
+            borderRadius: '0.5rem', 
+            fontSize: '0.775rem', 
+            fontWeight: 600, 
+            background: 'rgba(255, 255, 255, 0.03)', 
+            border: `1px solid ${allocInfo.color}`, 
+            color: allocInfo.color,
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.35rem'
+          }}>
+            {allocInfo.text}
           </div>
         )}
 
@@ -182,7 +249,6 @@ export default function TransactionForm({ onAddTransaction, wallets = [], curren
         </div>
 
         <button type="submit" className="btn-submit">
-          <PlusCircle size={18} />
           Simpan Transaksi
         </button>
       </form>
