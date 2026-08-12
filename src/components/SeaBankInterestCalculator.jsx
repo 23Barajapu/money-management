@@ -62,7 +62,7 @@ export default function SeaBankInterestCalculator({ formatIDR, wallets = [], onA
     let grossDaily = 0;
     let effectiveRate = 2.5;
 
-    if (bal <= TIER_LIMIT) {
+    if (bal < TIER_LIMIT) {
       effectiveRate = 2.5;
       grossDaily = (bal * 0.025) / 365;
     } else {
