@@ -892,7 +892,7 @@ export default function App() {
                 transactions={transactions} 
                 formatIDR={formatIDR} 
                 monthlyIncome={profile?.monthly_income}
-                paydayDate={paydayDate}
+                paydayDate={profile?.payday_date || 1}
                 currency={currency}
               />
 
