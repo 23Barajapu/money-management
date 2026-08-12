@@ -55,14 +55,24 @@ export default function ProfileModal({ isOpen, onClose, profile, setProfile, cur
         monthly_income: parsedIncome
       };
 
+      // 1. Sync to Supabase Auth Cloud User Metadata (Persists cross-device)
+      await supabase.auth.updateUser({
+        data: {
+          monthly_income: parsedIncome,
+          payday_date: parseInt(paydayDate),
+          email_notif: emailNotif,
+          push_notif: pushNotif
+        }
+      });
+
+      // 2. Local Storage Backup
       localStorage.setItem(`user_monthly_income_${user.id}`, parsedIncome.toString());
 
+      // 3. Upsert to Supabase profiles DB table
       const { error } = await supabase.from('profiles').upsert(updatedProfile);
       if (error) {
-        // Fallback jika kolom monthly_income belum ada di database
         delete updatedProfile.monthly_income;
-        const { error: err2 } = await supabase.from('profiles').upsert(updatedProfile);
-        if (err2) throw err2;
+        await supabase.from('profiles').upsert(updatedProfile);
         updatedProfile.monthly_income = parsedIncome;
       }
 

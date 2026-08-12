@@ -167,18 +167,44 @@ export default function App() {
         setWallets(defaultWallets);
       }
 
-      // 6. Fetch profile
+      // 6. Fetch profile & user_metadata for cross-device cloud sync
+      const authUser = (await supabase.auth.getUser()).data.user;
+      const metaIncome = authUser?.user_metadata?.monthly_income;
+      const metaPayday = authUser?.user_metadata?.payday_date;
       const savedIncome = localStorage.getItem(`user_monthly_income_${userId}`);
       const localIncome = savedIncome !== null ? parseFloat(savedIncome) : 0;
+
       const { data: profData, error: profErr } = await supabase
         .from('profiles')
         .select('*')
         .eq('user_id', userId)
         .maybeSingle();
+
+      const dbIncome = profData?.monthly_income;
+      const effectiveIncome = (dbIncome !== undefined && dbIncome !== null && Number(dbIncome) > 0)
+        ? Number(dbIncome)
+        : (metaIncome !== undefined && metaIncome !== null ? Number(metaIncome) : localIncome);
+
+      const effectivePayday = profData?.payday_date || metaPayday || 1;
+
+      if (effectiveIncome > 0) {
+        localStorage.setItem(`user_monthly_income_${userId}`, effectiveIncome.toString());
+      }
+
       if (!profErr && profData) {
-        setProfile({ ...profData, monthly_income: profData.monthly_income ?? localIncome });
+        setProfile({ 
+          ...profData, 
+          payday_date: effectivePayday,
+          monthly_income: effectiveIncome 
+        });
       } else {
-        const defaultProfile = { user_id: userId, payday_date: 1, email_notif: true, push_notif: true, monthly_income: localIncome };
+        const defaultProfile = { 
+          user_id: userId, 
+          payday_date: effectivePayday, 
+          email_notif: true, 
+          push_notif: true, 
+          monthly_income: effectiveIncome 
+        };
         await supabase.from('profiles').upsert(defaultProfile);
         setProfile(defaultProfile);
       }
