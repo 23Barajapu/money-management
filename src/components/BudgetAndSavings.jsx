@@ -146,7 +146,23 @@ export default function BudgetAndSavings({ transactions, formatIDR, paydayDate =
         target_date: goalTargetDate || null
       };
 
-      const { error } = await supabase.from('savings_goals').insert(newGoal);
+      let { error } = await supabase.from('savings_goals').insert(newGoal);
+
+      // Kolom target_date belum ada di DB — fallback insert tanpa kolom itu
+      if (error && error.message && error.message.includes('target_date')) {
+        const goalWithoutDate = { ...newGoal };
+        delete goalWithoutDate.target_date;
+        const result = await supabase.from('savings_goals').insert(goalWithoutDate);
+        error = result.error;
+        if (!error && showToast) {
+          showToast(
+            'Target dibuat! Untuk mengaktifkan fitur Deadline, jalankan SQL ini di Supabase:\n' +
+            'ALTER TABLE savings_goals ADD COLUMN IF NOT EXISTS target_date date;',
+            'info'
+          );
+        }
+      }
+
       if (error) throw error;
 
       setGoalName('');
