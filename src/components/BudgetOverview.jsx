@@ -49,7 +49,7 @@ export default function BudgetOverview({ transactions = [], monthlyIncome = 0, p
     };
   }, [transactions, paydayDate]);
 
-  const income = Math.max(0, monthlyIncome > 0 ? monthlyIncome : totalCycleIncome);
+  const income = Math.max(0, Number(monthlyIncome) || 0);
 
   const allocations = [
     {

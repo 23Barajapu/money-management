@@ -64,8 +64,8 @@ export default function FinanceAllocation({ monthlyIncome = 0, transactions = []
     };
   }, [transactions, paydayDate]);
 
-  // Effective income used for calculations (Profile target or recorded cycle income)
-  const income = Math.max(0, monthlyIncome > 0 ? monthlyIncome : totalCycleIncome);
+  // Income used for allocation is strictly the manual monthly income set in Profile
+  const income = Math.max(0, Number(monthlyIncome) || 0);
   const pokokLimit = income * 0.50; // 50%
   const bebasLimit = income * 0.05; // 5%
   const investasiLimit = income * 0.30; // 30%
