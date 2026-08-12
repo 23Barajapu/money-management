@@ -32,8 +32,9 @@ Aplikasi catatan keuangan pribadi berbasis React, Vite, dan Supabase. Bisa catat
   - Dilengkapi opsi *override* manual pada menu profil.
 
 - **Anggaran & Tabungan**
+  - **Alokasi Keuangan 50-5-30-15**: Kalkulasi otomatis alokasi keuangan ideal (50% Kebutuhan Pokok, 5% Kebutuhan Bebas, 30% Investasi, 15% Dana Darurat) berdasarkan penghasilan bulanan, lengkap dengan indikator realisasi transaksi & checklist disiplin bulanan.
   - Pasang batas pengeluaran per kategori, ada peringatan kalau sudah mendekati/melewati batas.
-  - Buat beberapa target tabungan sekaligus, bisa setor dan tarik kapan saja.
+  - Buat beberapa target tabungan sekaligus dengan tanggal target deadline & opsi setor/tarik custom.
   - Kalkulasi anggaran mengikuti siklus gajian yang sudah diatur.
 
 - **Analisis Keuangan**
@@ -46,6 +47,7 @@ Aplikasi catatan keuangan pribadi berbasis React, Vite, dan Supabase. Bisa catat
   - Kirim laporan keuangan ke email terdaftar — PDF terlampir langsung di inbox.
 
 - **Pengaturan Akun**
+  - Atur **Penghasilan Bersih Bulanan** pada profil sebagai acuan dasar alokasi keuangan 50-5-30-15.
   - Atur tanggal gajian (1–31) untuk menyesuaikan periode kalkulasi anggaran dan dasbor.
   - Reset sandi via link email dari Supabase.
   - Kelola preferensi notifikasi email dan push.
@@ -163,6 +165,7 @@ Aplikasi catatan keuangan pribadi berbasis React, Vite, dan Supabase. Bisa catat
    create table profiles (
      user_id uuid primary key references auth.users(id) on delete cascade,
      payday_date integer default 1 check (payday_date >= 1 and payday_date <= 31),
+     monthly_income numeric default 0,
      email_notif boolean default true,
      push_notif boolean default true
    );
