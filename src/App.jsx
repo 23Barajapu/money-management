@@ -247,20 +247,27 @@ export default function App() {
 
         if (totalNet > 0) {
           try {
-            const newTx = {
-              id: Date.now().toString(),
-              user_id: session.user.id,
-              type: 'income',
-              title: daysDiff > 1 ? `Bunga Akumulasi SeaBank (${daysDiff} Hari)` : 'Bunga Harian SeaBank (Otomatis)',
-              amount: totalNet,
-              category: 'Lainnya',
-              date: todayStr,
-              payment_method: seaBankW.id
-            };
+            const txsToInsert = [];
+            for (let i = 0; i < daysDiff; i++) {
+              const txDate = new Date(todayStr);
+              txDate.setDate(txDate.getDate() - (daysDiff - 1 - i));
+              const dateStr = txDate.toISOString().split('T')[0];
 
-            await supabase.from('transactions').insert(newTx);
+              txsToInsert.push({
+                id: (Date.now() + i).toString(),
+                user_id: session.user.id,
+                type: 'income',
+                title: 'Bunga Harian SeaBank (Otomatis)',
+                amount: netDaily,
+                category: 'Lainnya',
+                date: dateStr,
+                payment_method: seaBankW.id
+              });
+            }
+
+            await supabase.from('transactions').insert(txsToInsert);
             localStorage.setItem(lastInterestKey, todayStr);
-            showToast(`Bunga SeaBank ${daysDiff > 1 ? `${daysDiff} hari (${formatIDR(totalNet)})` : formatIDR(totalNet)} otomatis cair ke saldo!`, 'success');
+            showToast(`Bunga SeaBank ${daysDiff > 1 ? `(${daysDiff} hari x ${formatIDR(netDaily)})` : formatIDR(netDaily)} otomatis cair ke saldo!`, 'success');
             fetchUserData();
           } catch (e) {
             console.error('Error auto adding SeaBank interest:', e);
