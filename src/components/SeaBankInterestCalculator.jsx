@@ -145,26 +145,29 @@ export default function SeaBankInterestCalculator({ formatIDR, wallets = [], onA
 
       {/* Official SeaBank Rate Table Card */}
       <div style={{ background: 'rgba(255, 255, 255, 0.02)', border: '1px solid rgba(255, 255, 255, 0.06)', borderRadius: '12px', overflow: 'hidden', marginBottom: '1.25rem' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', padding: '0.6rem 1rem', background: 'rgba(255, 255, 255, 0.03)', borderBottom: '1px solid rgba(255, 255, 255, 0.05)', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
-          <span>Saldo Tabungan</span>
-          <span style={{ textAlign: 'right' }}>Suku Bunga p.a.*</span>
+        <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 2fr 1fr', padding: '0.6rem 1rem', background: 'rgba(255, 255, 255, 0.03)', borderBottom: '1px solid rgba(255, 255, 255, 0.05)', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
+          <span>Tipe Rekening</span>
+          <span>Jumlah Saldo</span>
+          <span style={{ textAlign: 'right' }}>Suku Bunga (p.a.)</span>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', padding: '0.75rem 1rem', borderBottom: '1px solid rgba(255, 255, 255, 0.03)', alignItems: 'center' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 2fr 1fr', padding: '0.75rem 1rem', borderBottom: '1px solid rgba(255, 255, 255, 0.03)', alignItems: 'center' }}>
+          <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Tabungan</span>
           <span style={{ fontSize: '0.85rem', color: '#fff', fontWeight: 500 }}>
-            Saldo Tabungan &lt; Rp 150.000.000
+            Rp 0 - Rp 149.999.999
           </span>
           <span style={{ fontSize: '0.95rem', fontWeight: 700, color: '#10b981', textAlign: 'right' }}>
-            2,5% p.a.
+            2,50%
           </span>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', padding: '0.75rem 1rem', alignItems: 'center', background: 'rgba(16, 185, 129, 0.02)' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 2fr 1fr', padding: '0.75rem 1rem', alignItems: 'center', background: 'rgba(16, 185, 129, 0.02)' }}>
+          <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Tabungan</span>
           <span style={{ fontSize: '0.85rem', color: '#fff', fontWeight: 500 }}>
-            Saldo Tabungan ≥ Rp 150.000.000
+            ≥ Rp 150.000.000
           </span>
           <span style={{ fontSize: '0.95rem', fontWeight: 700, color: '#06b6d4', textAlign: 'right' }}>
-            3,5% p.a.
+            3,50%
           </span>
         </div>
       </div>
