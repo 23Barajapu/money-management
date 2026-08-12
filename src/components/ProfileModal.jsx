@@ -11,13 +11,21 @@ export default function ProfileModal({ isOpen, onClose, profile, setProfile, cur
   const [loading, setLoading] = useState(false);
   const [successMsg, setSuccessMsg] = useState('');
   const [email, setEmail] = useState('');
+  const [avatarUrl, setAvatarUrl] = useState('');
+  const [oauthAvatar, setOauthAvatar] = useState('');
 
   const { displayValue: incomeDisplay, rawValue: incomeRaw, handleChange: handleIncomeChange, handleBlur: handleIncomeBlur, setValue: setIncomeValue } = useCurrencyInput(currency);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (user) {
-        setEmail(user.email);
+        setEmail(user.email || '');
+        const platformPic = user.user_metadata?.avatar_url || user.user_metadata?.picture || '';
+        setOauthAvatar(platformPic);
+
+        const currentPic = profile?.avatar_url || user.user_metadata?.custom_avatar_url || user.user_metadata?.avatar_url || user.user_metadata?.picture || '';
+        setAvatarUrl(currentPic);
+
         const savedIncome = localStorage.getItem(`user_monthly_income_${user.id}`);
         if (savedIncome !== null && savedIncome !== undefined) {
           setIncomeValue(parseFloat(savedIncome));
@@ -31,6 +39,7 @@ export default function ProfileModal({ isOpen, onClose, profile, setProfile, cur
       setPaydayDate(profile.payday_date || 1);
       setEmailNotif(profile.email_notif !== false);
       setPushNotif(profile.push_notif !== false);
+      if (profile.avatar_url) setAvatarUrl(profile.avatar_url);
       if (profile.monthly_income !== undefined && profile.monthly_income !== null) {
         setIncomeValue(profile.monthly_income || 0);
       }
@@ -52,12 +61,15 @@ export default function ProfileModal({ isOpen, onClose, profile, setProfile, cur
         payday_date: parseInt(paydayDate),
         email_notif: emailNotif,
         push_notif: pushNotif,
-        monthly_income: parsedIncome
+        monthly_income: parsedIncome,
+        avatar_url: avatarUrl
       };
 
       // 1. Sync to Supabase Auth Cloud User Metadata (Persists cross-device)
       await supabase.auth.updateUser({
         data: {
+          avatar_url: avatarUrl,
+          custom_avatar_url: avatarUrl,
           monthly_income: parsedIncome,
           payday_date: parseInt(paydayDate),
           email_notif: emailNotif,
@@ -72,13 +84,15 @@ export default function ProfileModal({ isOpen, onClose, profile, setProfile, cur
       const { error } = await supabase.from('profiles').upsert(updatedProfile);
       if (error) {
         delete updatedProfile.monthly_income;
+        delete updatedProfile.avatar_url;
         await supabase.from('profiles').upsert(updatedProfile);
         updatedProfile.monthly_income = parsedIncome;
+        updatedProfile.avatar_url = avatarUrl;
       }
 
       setProfile(updatedProfile);
-      setSuccessMsg('Pengaturan berhasil disimpan!');
-      if (showToast) showToast('Pengaturan profil disimpan!', 'success');
+      setSuccessMsg('Pengaturan profil berhasil disimpan!');
+      if (showToast) showToast('Profil & foto berhasil diperbarui!', 'success');
       setTimeout(() => setSuccessMsg(''), 3000);
     } catch (error) {
       if (showToast) showToast('Gagal menyimpan profil: ' + error.message, 'error');
@@ -91,12 +105,13 @@ export default function ProfileModal({ isOpen, onClose, profile, setProfile, cur
     const doReset = async () => {
       try {
         const { error } = await supabase.auth.resetPasswordForEmail(email, {
-          redirectTo: window.location.origin
+          redirectTo: window.location.origin,
         });
         if (error) throw error;
-        if (showToast) showToast('Email pengubahan sandi berhasil dikirim! Silakan periksa inbox/spam Anda.', 'success');
-      } catch (error) {
-        if (showToast) showToast('Gagal mengirim email reset sandi: ' + error.message, 'error');
+        setSuccessMsg('Tautan reset password telah dikirim ke email Anda.');
+        if (showToast) showToast('Tautan reset password terkirim!', 'info');
+      } catch (err) {
+        if (showToast) showToast('Gagal reset password: ' + err.message, 'error');
       }
     };
 
@@ -136,7 +151,7 @@ export default function ProfileModal({ isOpen, onClose, profile, setProfile, cur
               onClick={() => setActiveTab('account')}
             >
               <Shield size={16} />
-              <span>Akun & Keamanan</span>
+              <span>Akun & Foto</span>
             </button>
             <button 
               className={`profile-tab-item ${activeTab === 'financial' ? 'active' : ''}`}
@@ -162,9 +177,48 @@ export default function ProfileModal({ isOpen, onClose, profile, setProfile, cur
               {/* TAB 1: ACCOUNT & SECURITY */}
               {activeTab === 'account' && (
                 <div>
-                  <h3 style={{ margin: '0 0 1rem 0', fontSize: '1rem', fontWeight: 600 }}>Informasi Akun</h3>
+                  <h3 style={{ margin: '0 0 1rem 0', fontSize: '1rem', fontWeight: 600 }}>Foto & Informasi Akun</h3>
                   
-                  <div className="form-group" style={{ marginBottom: '1.5rem' }}>
+                  {/* Avatar Preview & Actions */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.25rem', padding: '0.85rem', background: 'rgba(255,255,255,0.02)', borderRadius: '10px', border: '1px solid var(--border-color)' }}>
+                    <div style={{ width: '54px', height: '54px', borderRadius: '50%', overflow: 'hidden', background: '#10b981', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      {avatarUrl ? (
+                        <img src={avatarUrl} alt="Foto Profil" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={(e) => { e.target.style.display = 'none'; }} />
+                      ) : (
+                        <span style={{ fontSize: '1.2rem', fontWeight: 700, color: '#0b0f19' }}>
+                          {email ? email[0].toUpperCase() : 'U'}
+                        </span>
+                      )}
+                    </div>
+
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '0.25rem' }}>Foto Profil Akun</span>
+                      {oauthAvatar && avatarUrl !== oauthAvatar && (
+                        <button
+                          type="button"
+                          onClick={() => setAvatarUrl(oauthAvatar)}
+                          style={{ background: 'rgba(6, 182, 212, 0.1)', border: '1px solid #06b6d4', color: '#06b6d4', fontSize: '0.725rem', padding: '0.25rem 0.5rem', borderRadius: '4px', cursor: 'pointer' }}
+                        >
+                          Reset ke Foto Login Platform (Google/GitHub)
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="form-group" style={{ marginBottom: '1.25rem' }}>
+                    <label>URL Foto Profil (Bisa Diubah)</label>
+                    <input 
+                      type="url" 
+                      placeholder="https://example.com/foto.jpg" 
+                      value={avatarUrl} 
+                      onChange={(e) => setAvatarUrl(e.target.value)} 
+                    />
+                    <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', display: 'block', marginTop: '0.25rem' }}>
+                      Otomatis ditarik dari platform login (Google/GitHub), atau masukkan URL gambar sendiri.
+                    </span>
+                  </div>
+
+                  <div className="form-group" style={{ marginBottom: '1.25rem' }}>
                     <label>Email Pengguna</label>
                     <input type="text" value={email} disabled style={{ opacity: 0.7 }} />
                   </div>
