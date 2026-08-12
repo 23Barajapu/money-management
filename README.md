@@ -62,7 +62,7 @@ Aplikasi catatan keuangan pribadi berbasis React, Vite, dan Supabase. Bisa catat
 ## Tech Stack
 
 | Layer | Library |
-|---|---|
+| --- | --- |
 | Frontend | React 18 + Vite |
 | Database & Auth | Supabase (PostgreSQL + Auth) |
 | Charts | Chart.js via react-chartjs-2 |
@@ -75,17 +75,20 @@ Aplikasi catatan keuangan pribadi berbasis React, Vite, dan Supabase. Bisa catat
 ## Setup
 
 1. Clone repo:
+
    ```bash
    git clone https://github.com/23Barajapu/money-management.git
    cd money-management
    ```
 
 2. Install dependensi:
+
    ```bash
    npm install
    ```
 
 3. Buat tabel di **Supabase SQL Editor**:
+
    ```sql
    -- 1. Transactions
    create table transactions (
@@ -192,12 +195,14 @@ Aplikasi catatan keuangan pribadi berbasis React, Vite, dan Supabase. Bisa catat
    ```
 
 4. Buat file `.env`:
+
    ```env
    VITE_SUPABASE_URL=URL_SUPABASE_ANDA
    VITE_SUPABASE_ANON_KEY=KEY_ANON_SUPABASE_ANDA
    ```
 
 5. Jalankan:
+
    ```bash
    npm run dev
    ```
