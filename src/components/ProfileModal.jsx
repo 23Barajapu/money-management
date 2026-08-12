@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
-import { User, Shield, CreditCard, Bell, X, Check, Key, DollarSign } from 'lucide-react';
+import { User, Shield, CreditCard, Bell, X, Check, Key, DollarSign, Upload, Trash2 } from 'lucide-react';
 import { useCurrencyInput } from '../hooks/useCurrencyInput';
 
 export default function ProfileModal({ isOpen, onClose, profile, setProfile, currency, setCurrency, showToast, showConfirm }) {
@@ -47,6 +47,50 @@ export default function ProfileModal({ isOpen, onClose, profile, setProfile, cur
   }, [profile, isOpen]);
 
   if (!isOpen) return null;
+
+  const handleFileChange = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      if (showToast) showToast('File yang dipilih harus berupa gambar!', 'error');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const MAX_SIZE = 250;
+        let width = img.width;
+        let height = img.height;
+
+        if (width > height) {
+          if (width > MAX_SIZE) {
+            height = Math.round((height * MAX_SIZE) / width);
+            width = MAX_SIZE;
+          }
+        } else {
+          if (height > MAX_SIZE) {
+            width = Math.round((width * MAX_SIZE) / height);
+            height = MAX_SIZE;
+          }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, width, height);
+
+        const compressedBase64 = canvas.toDataURL('image/jpeg', 0.8);
+        setAvatarUrl(compressedBase64);
+        if (showToast) showToast('Foto profil baru dipilih!', 'info');
+      };
+      img.src = event.target.result;
+    };
+    reader.readAsDataURL(file);
+  };
 
   const handleSavePreferences = async () => {
     setLoading(true);
@@ -205,16 +249,45 @@ export default function ProfileModal({ isOpen, onClose, profile, setProfile, cur
                     </div>
                   </div>
 
+                  {/* File Upload Component */}
                   <div className="form-group" style={{ marginBottom: '1.25rem' }}>
-                    <label>URL Foto Profil (Bisa Diubah)</label>
-                    <input 
-                      type="url" 
-                      placeholder="https://example.com/foto.jpg" 
-                      value={avatarUrl} 
-                      onChange={(e) => setAvatarUrl(e.target.value)} 
-                    />
-                    <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', display: 'block', marginTop: '0.25rem' }}>
-                      Otomatis ditarik dari platform login (Google/GitHub), atau masukkan URL gambar sendiri.
+                    <label style={{ display: 'block', marginBottom: '0.5rem' }}>Upload Foto Profil Baru</label>
+                    <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
+                      <label 
+                        style={{ 
+                          display: 'inline-flex', 
+                          alignItems: 'center', 
+                          gap: '0.4rem', 
+                          background: 'var(--accent-color)', 
+                          color: '#fff', 
+                          padding: '0.5rem 1rem', 
+                          borderRadius: '8px', 
+                          fontSize: '0.825rem', 
+                          fontWeight: 600, 
+                          cursor: 'pointer' 
+                        }}
+                      >
+                        <Upload size={15} /> Pilih File Gambar
+                        <input 
+                          type="file" 
+                          accept="image/*" 
+                          onChange={handleFileChange} 
+                          style={{ display: 'none' }} 
+                        />
+                      </label>
+
+                      {avatarUrl && (
+                        <button
+                          type="button"
+                          onClick={() => setAvatarUrl('')}
+                          style={{ background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.3)', color: '#ef4444', padding: '0.5rem 0.75rem', borderRadius: '8px', fontSize: '0.8rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.3rem' }}
+                        >
+                          <Trash2 size={14} /> Hapus Foto
+                        </button>
+                      )}
+                    </div>
+                    <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', display: 'block', marginTop: '0.4rem' }}>
+                      Format yang didukung: JPG, PNG, WebP (Otomatis dikompres agar ringan & sinkron antar perangkat).
                     </span>
                   </div>
 
