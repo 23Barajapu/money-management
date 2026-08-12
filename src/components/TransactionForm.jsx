@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useCurrencyInput } from '../hooks/useCurrencyInput';
+import { AlertTriangle } from 'lucide-react';
 
-export default function TransactionForm({ onAddTransaction, wallets = [], currency = 'IDR', initialType = 'income' }) {
+export default function TransactionForm({ onAddTransaction, wallets = [], currency = 'IDR', initialType = 'income', transactions = [], monthlyIncome = 0, paydayDate = 1 }) {
   const [type, setType] = useState(initialType); // 'income', 'expense', or 'transfer'
   const [title, setTitle] = useState('');
   const [category, setCategory] = useState('');
@@ -88,6 +89,92 @@ export default function TransactionForm({ onAddTransaction, wallets = [], curren
     return { text: 'Pos Alokasi: Kebutuhan Pokok (50%)', color: '#8b5cf6' };
   };
 
+  const { totalCycleIncome, spentPokok, spentBebas, spentInvestasi, savedDarurat } = React.useMemo(() => {
+    const now = new Date();
+    let cycleStart, cycleEnd;
+    const pDate = parseInt(paydayDate);
+
+    if (now.getDate() >= pDate) {
+      cycleStart = new Date(now.getFullYear(), now.getMonth(), pDate);
+      cycleEnd = new Date(now.getFullYear(), now.getMonth() + 1, pDate - 1, 23, 59, 59);
+    } else {
+      cycleStart = new Date(now.getFullYear(), now.getMonth() - 1, pDate);
+      cycleEnd = new Date(now.getFullYear(), now.getMonth(), pDate - 1, 23, 59, 59);
+    }
+
+    let cycleInc = 0, pokok = 0, bebas = 0, investasi = 0, darurat = 0;
+    
+    if (transactions && transactions.length > 0) {
+      transactions.forEach(t => {
+        const d = new Date(t.date);
+        if (d >= cycleStart && d <= cycleEnd) {
+          if (t.type === 'income') {
+            cycleInc += t.amount;
+          } else if (t.type === 'expense' || t.type === 'deposit') {
+            const cat = (t.category || '').toLowerCase();
+            if (cat.includes('investasi') || cat.includes('saham') || cat.includes('crypto') || cat.includes('reksa') || cat.includes('emas') || cat.includes('edukasi') || cat.includes('kursus')) {
+              investasi += t.amount;
+            } else if (cat.includes('hiburan') || cat.includes('belanja') || cat.includes('gaya') || cat.includes('dining') || cat.includes('hobi') || cat.includes('jajan')) {
+              bebas += t.amount;
+            } else if (t.type === 'deposit' || cat.includes('tabungan') || cat.includes('darurat')) {
+              darurat += t.amount;
+            } else {
+              pokok += t.amount;
+            }
+          }
+        }
+      });
+    }
+
+    return { totalCycleIncome: cycleInc, spentPokok: pokok, spentBebas: bebas, spentInvestasi: investasi, savedDarurat: darurat };
+  }, [transactions, paydayDate]);
+
+  const getWarningMessage = () => {
+    const amount = parseFloat(rawValue || '0');
+    if (isNaN(amount) || amount <= 0) return null;
+
+    // Check Wallet Limit
+    if (type === 'expense' || type === 'transfer') {
+      const selectedWallet = activeWallets.find(w => w.id === paymentMethod);
+      if (selectedWallet && selectedWallet.type !== 'cash') {
+        if (amount > selectedWallet.balance) {
+          return { text: `Saldo dompet "${selectedWallet.name}" tidak mencukupi!`, type: 'error' };
+        } else if (amount >= selectedWallet.balance * 0.9) {
+          return { text: `Transaksi ini hampir menghabiskan seluruh saldo dompet "${selectedWallet.name}".`, type: 'warning' };
+        }
+      }
+    }
+
+    // Check Category Allocation Limit
+    if (type === 'expense') {
+      const baseIncome = monthlyIncome > 0 ? monthlyIncome : totalCycleIncome;
+      if (baseIncome <= 0) return null;
+
+      const catInfo = getAllocationInfo(category, type);
+      if (catInfo && category) {
+        let limit = 0;
+        let currentSpent = 0;
+        let bucketName = '';
+        
+        if (catInfo.text.includes('Kebutuhan Pokok')) { limit = baseIncome * 0.5; currentSpent = spentPokok; bucketName = 'Kebutuhan Pokok (50%)'; }
+        else if (catInfo.text.includes('Kebutuhan Bebas')) { limit = baseIncome * 0.05; currentSpent = spentBebas; bucketName = 'Kebutuhan Bebas (5%)'; }
+        else if (catInfo.text.includes('Investasi')) { limit = baseIncome * 0.3; currentSpent = spentInvestasi; bucketName = 'Investasi (30%)'; }
+        else if (catInfo.text.includes('Dana Darurat')) { limit = baseIncome * 0.15; currentSpent = savedDarurat; bucketName = 'Dana Darurat (15%)'; }
+
+        if (limit > 0) {
+          if (currentSpent + amount > limit) {
+            return { text: `Transaksi ini akan melebihi sisa alokasi ${bucketName} bulan ini!`, type: 'error' };
+          } else if (currentSpent + amount >= limit * 0.9) {
+            return { text: `Perhatian: Sisa alokasi ${bucketName} hampir habis.`, type: 'warning' };
+          }
+        }
+      }
+    }
+    
+    return null;
+  };
+
+  const warningMsg = getWarningMessage();
   const allocInfo = getAllocationInfo(category, type);
 
   return (
@@ -256,6 +343,24 @@ export default function TransactionForm({ onAddTransaction, wallets = [], curren
             required
           />
         </div>
+
+        {warningMsg && (
+          <div style={{
+            marginBottom: '1rem',
+            padding: '0.75rem',
+            borderRadius: '0.5rem',
+            fontSize: '0.85rem',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.5rem',
+            background: warningMsg.type === 'error' ? 'rgba(239, 68, 68, 0.1)' : 'rgba(245, 158, 11, 0.1)',
+            color: warningMsg.type === 'error' ? 'var(--expense-color)' : '#f59e0b',
+            border: `1px solid ${warningMsg.type === 'error' ? 'var(--expense-color)' : '#f59e0b'}`
+          }}>
+            <AlertTriangle size={16} style={{ flexShrink: 0 }} />
+            <span>{warningMsg.text}</span>
+          </div>
+        )}
 
         <button type="submit" className="btn-submit">
           Simpan Transaksi

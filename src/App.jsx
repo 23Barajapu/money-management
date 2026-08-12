@@ -966,7 +966,15 @@ export default function App() {
         {/* Tab 2: Transactions */}
         {activeTab === 'transactions' && (
           <div className="main-grid" style={{ gridTemplateColumns: '1fr' }}>
-            <TransactionForm onAddTransaction={handleAddTransaction} wallets={walletsWithUpdatedBalances} currency={currency} initialType={selectedFormType} />
+            <TransactionForm 
+              onAddTransaction={handleAddTransaction} 
+              wallets={walletsWithUpdatedBalances} 
+              currency={currency} 
+              initialType={selectedFormType} 
+              transactions={transactions}
+              monthlyIncome={profile?.monthly_income || 0}
+              paydayDate={profile?.payday_date || 1}
+            />
             
             <div className="card">
               <div className="list-header">
