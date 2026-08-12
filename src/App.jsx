@@ -1032,6 +1032,8 @@ export default function App() {
               showToast={showToast}
               showConfirm={showConfirm}
               currency={currency}
+              wallets={walletsWithUpdatedBalances}
+              onAddTransaction={handleAddTransaction}
             />
             <SeaBankInterestCalculator 
               formatIDR={formatIDR} 

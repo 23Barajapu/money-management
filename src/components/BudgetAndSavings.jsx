@@ -4,7 +4,7 @@ import { PiggyBank, Target, Plus, Trash2, ArrowUpRight, ArrowDownLeft, AlertTria
 import { useCurrencyInput } from '../hooks/useCurrencyInput';
 import FinanceAllocation from './FinanceAllocation';
 
-export default function BudgetAndSavings({ transactions, formatIDR, paydayDate = 1, monthlyIncome = 0, onOpenProfile, showToast, showConfirm, currency = 'IDR' }) {
+export default function BudgetAndSavings({ transactions, formatIDR, paydayDate = 1, monthlyIncome = 0, onOpenProfile, showToast, showConfirm, currency = 'IDR', wallets = [], onAddTransaction }) {
   const [budgets, setBudgets] = useState([]);
   const [goals, setGoals] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -20,7 +20,7 @@ export default function BudgetAndSavings({ transactions, formatIDR, paydayDate =
   const { displayValue: goalSavedDisplay, rawValue: goalSavedRaw, handleChange: handleGoalSavedChange, handleBlur: handleGoalSavedBlur, reset: resetGoalSaved, setValue: setGoalSavedValue } = useCurrencyInput(currency);
 
   // Custom Modal Action
-  const [customAction, setCustomAction] = useState({ isOpen: false, goal: null, isDeposit: true });
+  const [customAction, setCustomAction] = useState({ isOpen: false, goal: null, isDeposit: true, walletId: '' });
   const { displayValue: customAmountDisplay, rawValue: customAmountRaw, handleChange: handleCustomAmountChange, handleBlur: handleCustomAmountBlur, reset: resetCustomAmount } = useCurrencyInput(currency);
 
   // Transaction Category Options (matching TransactionForm 50-5-30-15)
@@ -181,12 +181,27 @@ export default function BudgetAndSavings({ transactions, formatIDR, paydayDate =
     }
   };
 
-  const handleUpdateSaved = async (goal, amountChange) => {
+  const handleUpdateSaved = async (goal, amountChange, walletId = null) => {
     try {
       const updatedSaved = Math.max(0, goal.current_saved + amountChange);
       const { error } = await supabase.from('savings_goals').update({ current_saved: updatedSaved }).eq('id', goal.id);
       if (error) throw error;
-      if (showToast) showToast('Saldo tabungan diperbarui!', 'success');
+      
+      if (walletId && onAddTransaction) {
+        const isDeposit = amountChange > 0;
+        await onAddTransaction({
+          id: Date.now().toString(),
+          type: isDeposit ? 'expense' : 'income',
+          title: isDeposit ? `Nabung: ${goal.goal_name}` : `Tarik Tabungan: ${goal.goal_name}`,
+          amount: Math.abs(amountChange),
+          category: 'Tabungan Darurat',
+          date: new Date().toISOString().split('T')[0],
+          payment_method: walletId
+        });
+      } else {
+        if (showToast) showToast('Saldo tabungan diperbarui!', 'success');
+      }
+
       fetchData();
     } catch (error) {
       if (showToast) showToast(error.message, 'error');
@@ -316,7 +331,7 @@ export default function BudgetAndSavings({ transactions, formatIDR, paydayDate =
               }
 
               const handleCustomUpdatePrompt = (isDeposit) => {
-                setCustomAction({ isOpen: true, goal: g, isDeposit });
+                setCustomAction({ isOpen: true, goal: g, isDeposit, walletId: '' });
                 resetCustomAmount();
               };
 
@@ -391,7 +406,7 @@ export default function BudgetAndSavings({ transactions, formatIDR, paydayDate =
               <PiggyBank size={20} color={customAction.isDeposit ? 'var(--income-color)' : 'var(--expense-color)'} />
               {customAction.isDeposit ? 'Setor ke' : 'Tarik dari'} {customAction.goal?.goal_name}
             </h3>
-            <div className="form-group" style={{ marginBottom: '1.5rem' }}>
+            <div className="form-group" style={{ marginBottom: '1.25rem' }}>
               <label>Nominal ({currency})</label>
               <input 
                 type="text" 
@@ -403,10 +418,23 @@ export default function BudgetAndSavings({ transactions, formatIDR, paydayDate =
                 autoFocus
               />
             </div>
+            <div className="form-group" style={{ marginBottom: '1.5rem' }}>
+              <label>{customAction.isDeposit ? 'Sumber Dana' : 'Tujuan Dana'}</label>
+              <select 
+                value={customAction.walletId} 
+                onChange={(e) => setCustomAction({...customAction, walletId: e.target.value})}
+              >
+                <option value="" disabled>-- Pilih Dompet --</option>
+                <option value="wallet_cash">Tunai (Cash)</option>
+                {wallets.map(w => (
+                  <option key={w.id} value={w.id}>{w.name} ({formatIDR(w.balance)})</option>
+                ))}
+              </select>
+            </div>
             <div style={{ display: 'flex', gap: '0.75rem' }}>
               <button 
                 className="btn-delete"
-                onClick={() => setCustomAction({ isOpen: false, goal: null, isDeposit: true })}
+                onClick={() => setCustomAction({ isOpen: false, goal: null, isDeposit: true, walletId: '' })}
                 style={{ flex: 1, padding: '0.75rem', border: '1px solid var(--border-color)', background: 'transparent' }}
               >
                 Batal
@@ -416,8 +444,12 @@ export default function BudgetAndSavings({ transactions, formatIDR, paydayDate =
                 onClick={() => {
                   const num = parseFloat(customAmountRaw || '0');
                   if (!isNaN(num) && num > 0) {
-                    handleUpdateSaved(customAction.goal, customAction.isDeposit ? num : -num);
-                    setCustomAction({ isOpen: false, goal: null, isDeposit: true });
+                    if (customAction.walletId) {
+                      handleUpdateSaved(customAction.goal, customAction.isDeposit ? num : -num, customAction.walletId);
+                      setCustomAction({ isOpen: false, goal: null, isDeposit: true, walletId: '' });
+                    } else {
+                      if (showToast) showToast('Pilih sumber/tujuan dana terlebih dahulu!', 'error');
+                    }
                   } else {
                     if (showToast) showToast('Masukkan nominal yang valid', 'error');
                   }
