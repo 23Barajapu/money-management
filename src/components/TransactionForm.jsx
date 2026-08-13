@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useCurrencyInput } from '../hooks/useCurrencyInput';
 import { AlertTriangle } from 'lucide-react';
 
-export default function TransactionForm({ onAddTransaction, wallets = [], currency = 'IDR', initialType = 'income', transactions = [], monthlyIncome = 0, paydayDate = 1 }) {
+export default function TransactionForm({ onAddTransaction, wallets = [], currency = 'IDR', initialType = 'income', transactions = [], monthlyIncome = 0, paydayDate = 1, t = (k) => k }) {
   const [type, setType] = useState(initialType); // 'income', 'expense', or 'transfer'
   const [title, setTitle] = useState('');
   const [category, setCategory] = useState('');
@@ -138,9 +138,9 @@ export default function TransactionForm({ onAddTransaction, wallets = [], curren
       const selectedWallet = activeWallets.find(w => w.id === paymentMethod);
       if (selectedWallet && selectedWallet.type !== 'cash') {
         if (amount > selectedWallet.balance) {
-          return { text: `Saldo dompet "${selectedWallet.name}" tidak mencukupi!`, type: 'error' };
+          return { text: t('walletInsufficient').replace('{wallet}', selectedWallet.name), type: 'error' };
         } else if (amount >= selectedWallet.balance * 0.9) {
-          return { text: `Transaksi ini hampir menghabiskan seluruh saldo dompet "${selectedWallet.name}".`, type: 'warning' };
+          return { text: t('walletAlmostEmpty').replace('{wallet}', selectedWallet.name), type: 'warning' };
         }
       }
     }
@@ -163,9 +163,9 @@ export default function TransactionForm({ onAddTransaction, wallets = [], curren
 
         if (limit > 0) {
           if (currentSpent + amount > limit) {
-            return { text: `Transaksi ini akan melebihi sisa alokasi ${bucketName} bulan ini!`, type: 'error' };
+            return { text: t('allocationExceeded').replace('{bucket}', bucketName), type: 'error' };
           } else if (currentSpent + amount >= limit * 0.9) {
-            return { text: `Perhatian: Sisa alokasi ${bucketName} hampir habis.`, type: 'warning' };
+            return { text: t('allocationAlmostEmpty').replace('{bucket}', bucketName), type: 'warning' };
           }
         }
       }

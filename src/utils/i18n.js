@@ -64,12 +64,30 @@ export const translations = {
     cancel: 'Batal',
     submit: 'Simpan',
     all: 'Semua',
-    transfer: 'Transfer'
+    transfer: 'Transfer',
+
+    // Warnings & Validation
+    walletInsufficient: 'Saldo dompet "{wallet}" tidak mencukupi!',
+    walletAlmostEmpty: 'Transaksi ini hampir menghabiskan seluruh saldo dompet "{wallet}".',
+    allocationExceeded: 'Transaksi ini akan melebihi sisa alokasi {bucket} bulan ini!',
+    allocationAlmostEmpty: 'Perhatian: Sisa alokasi {bucket} hampir habis.',
+    selectWalletFirst: 'Pilih sumber/tujuan dana terlebih dahulu!',
+    invalidAmount: 'Masukkan nominal yang valid',
+
+    // Savings Modal
+    depositTo: 'Setor ke',
+    withdrawFrom: 'Tarik dari',
+    nominalAmount: 'Nominal',
+    fundSource: 'Sumber Dana',
+    fundDestination: 'Tujuan Dana',
+    selectWallet: '-- Pilih Dompet --',
+    cash: 'Tunai (Cash)',
+    confirm: 'Konfirmasi'
   },
   en: {
     // Navigation
     dashboard: 'Dashboard',
-    transactions: 'Transactions',
+    transactions: 'Transaksi',
     budgets: 'Budgets',
     analytics: 'Analytics',
     reminders: 'Bills & Installments',
@@ -124,7 +142,25 @@ export const translations = {
     cancel: 'Cancel',
     submit: 'Save',
     all: 'All',
-    transfer: 'Transfer'
+    transfer: 'Transfer',
+
+    // Warnings & Validation
+    walletInsufficient: 'Wallet balance "{wallet}" is insufficient!',
+    walletAlmostEmpty: 'This transaction will almost empty your "{wallet}" balance.',
+    allocationExceeded: 'This will exceed your {bucket} allocation limit this month!',
+    allocationAlmostEmpty: 'Warning: Your {bucket} allocation is running low.',
+    selectWalletFirst: 'Please select a fund source/destination first!',
+    invalidAmount: 'Please enter a valid amount',
+
+    // Savings Modal
+    depositTo: 'Deposit to',
+    withdrawFrom: 'Withdraw from',
+    nominalAmount: 'Amount',
+    fundSource: 'Fund Source',
+    fundDestination: 'Fund Destination',
+    selectWallet: '-- Select Wallet --',
+    cash: 'Cash',
+    confirm: 'Confirm'
   }
 };
 

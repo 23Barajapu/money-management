@@ -4,7 +4,7 @@ import { PiggyBank, Target, Plus, Trash2, ArrowUpRight, ArrowDownLeft, AlertTria
 import { useCurrencyInput } from '../hooks/useCurrencyInput';
 import FinanceAllocation from './FinanceAllocation';
 
-export default function BudgetAndSavings({ transactions, formatIDR, paydayDate = 1, monthlyIncome = 0, onOpenProfile, showToast, showConfirm, currency = 'IDR', wallets = [], onAddTransaction }) {
+export default function BudgetAndSavings({ transactions, formatIDR, paydayDate = 1, monthlyIncome = 0, onOpenProfile, showToast, showConfirm, currency = 'IDR', wallets = [], onAddTransaction, t = (k) => k }) {
   const [budgets, setBudgets] = useState([]);
   const [goals, setGoals] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -404,10 +404,10 @@ export default function BudgetAndSavings({ transactions, formatIDR, paydayDate =
           <div className="modal-card" style={{ maxWidth: '400px' }}>
             <h3 style={{ margin: '0 0 1rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '1.1rem' }}>
               <PiggyBank size={20} color={customAction.isDeposit ? 'var(--income-color)' : 'var(--expense-color)'} />
-              {customAction.isDeposit ? 'Setor ke' : 'Tarik dari'} {customAction.goal?.goal_name}
+              {customAction.isDeposit ? t('depositTo') : t('withdrawFrom')} {customAction.goal?.goal_name}
             </h3>
             <div className="form-group" style={{ marginBottom: '1.25rem' }}>
-              <label>Nominal ({currency})</label>
+              <label>{t('nominalAmount')} ({currency})</label>
               <input 
                 type="text" 
                 inputMode="numeric"
@@ -419,13 +419,13 @@ export default function BudgetAndSavings({ transactions, formatIDR, paydayDate =
               />
             </div>
             <div className="form-group" style={{ marginBottom: '1.5rem' }}>
-              <label>{customAction.isDeposit ? 'Sumber Dana' : 'Tujuan Dana'}</label>
+              <label>{customAction.isDeposit ? t('fundSource') : t('fundDestination')}</label>
               <select 
                 value={customAction.walletId} 
                 onChange={(e) => setCustomAction({...customAction, walletId: e.target.value})}
               >
-                <option value="" disabled>-- Pilih Dompet --</option>
-                <option value="wallet_cash">Tunai (Cash)</option>
+                <option value="" disabled>{t('selectWallet')}</option>
+                <option value="wallet_cash">{t('cash')}</option>
                 {wallets.map(w => (
                   <option key={w.id} value={w.id}>{w.name} ({formatIDR(w.balance)})</option>
                 ))}
@@ -437,7 +437,7 @@ export default function BudgetAndSavings({ transactions, formatIDR, paydayDate =
                 onClick={() => setCustomAction({ isOpen: false, goal: null, isDeposit: true, walletId: '' })}
                 style={{ flex: 1, padding: '0.75rem', border: '1px solid var(--border-color)', background: 'transparent' }}
               >
-                Batal
+                {t('cancel')}
               </button>
               <button 
                 className="btn-submit"
@@ -448,15 +448,15 @@ export default function BudgetAndSavings({ transactions, formatIDR, paydayDate =
                       handleUpdateSaved(customAction.goal, customAction.isDeposit ? num : -num, customAction.walletId);
                       setCustomAction({ isOpen: false, goal: null, isDeposit: true, walletId: '' });
                     } else {
-                      if (showToast) showToast('Pilih sumber/tujuan dana terlebih dahulu!', 'error');
+                      if (showToast) showToast(t('selectWalletFirst'), 'error');
                     }
                   } else {
-                    if (showToast) showToast('Masukkan nominal yang valid', 'error');
+                    if (showToast) showToast(t('invalidAmount'), 'error');
                   }
                 }}
                 style={{ flex: 1, padding: '0.75rem', background: customAction.isDeposit ? 'var(--income-color)' : 'var(--expense-color)' }}
               >
-                Konfirmasi
+                {t('confirm')}
               </button>
             </div>
           </div>

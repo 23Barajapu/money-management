@@ -974,6 +974,7 @@ export default function App() {
               transactions={transactions}
               monthlyIncome={profile?.monthly_income || 0}
               paydayDate={profile?.payday_date || 1}
+              t={t}
             />
             
             <div className="card">
@@ -1042,6 +1043,7 @@ export default function App() {
               currency={currency}
               wallets={walletsWithUpdatedBalances}
               onAddTransaction={handleAddTransaction}
+              t={t}
             />
             <SeaBankInterestCalculator 
               formatIDR={formatIDR} 
