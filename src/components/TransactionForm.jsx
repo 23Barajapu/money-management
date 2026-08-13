@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useCurrencyInput } from '../hooks/useCurrencyInput';
+import { usePaydayCycle } from '../hooks/usePaydayCycle';
 import { AlertTriangle } from 'lucide-react';
 
 export default function TransactionForm({ onAddTransaction, wallets = [], currency = 'IDR', initialType = 'income', transactions = [], monthlyIncome = 0, paydayDate = 1, t = (k) => k }) {
@@ -89,45 +90,7 @@ export default function TransactionForm({ onAddTransaction, wallets = [], curren
     return { text: 'Pos Alokasi: Kebutuhan Pokok (50%)', color: '#8b5cf6' };
   };
 
-  const { totalCycleIncome, spentPokok, spentBebas, spentInvestasi, savedDarurat } = React.useMemo(() => {
-    const now = new Date();
-    let cycleStart, cycleEnd;
-    const pDate = parseInt(paydayDate);
-
-    if (now.getDate() >= pDate) {
-      cycleStart = new Date(now.getFullYear(), now.getMonth(), pDate);
-      cycleEnd = new Date(now.getFullYear(), now.getMonth() + 1, pDate - 1, 23, 59, 59);
-    } else {
-      cycleStart = new Date(now.getFullYear(), now.getMonth() - 1, pDate);
-      cycleEnd = new Date(now.getFullYear(), now.getMonth(), pDate - 1, 23, 59, 59);
-    }
-
-    let cycleInc = 0, pokok = 0, bebas = 0, investasi = 0, darurat = 0;
-    
-    if (transactions && transactions.length > 0) {
-      transactions.forEach(t => {
-        const d = new Date(t.date);
-        if (d >= cycleStart && d <= cycleEnd) {
-          if (t.type === 'income') {
-            cycleInc += t.amount;
-          } else if (t.type === 'expense' || t.type === 'deposit') {
-            const cat = (t.category || '').toLowerCase();
-            if (cat.includes('investasi') || cat.includes('saham') || cat.includes('crypto') || cat.includes('reksa') || cat.includes('emas') || cat.includes('edukasi') || cat.includes('kursus')) {
-              investasi += t.amount;
-            } else if (cat.includes('hiburan') || cat.includes('belanja') || cat.includes('gaya') || cat.includes('dining') || cat.includes('hobi') || cat.includes('jajan')) {
-              bebas += t.amount;
-            } else if (t.type === 'deposit' || cat.includes('tabungan') || cat.includes('darurat')) {
-              darurat += t.amount;
-            } else {
-              pokok += t.amount;
-            }
-          }
-        }
-      });
-    }
-
-    return { totalCycleIncome: cycleInc, spentPokok: pokok, spentBebas: bebas, spentInvestasi: investasi, savedDarurat: darurat };
-  }, [transactions, paydayDate]);
+  const { totalCycleIncome, spentPokok, spentBebas, spentInvestasi, savedDarurat } = usePaydayCycle(transactions, paydayDate);
 
   const getWarningMessage = () => {
     const amount = parseFloat(rawValue || '0');

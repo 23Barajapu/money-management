@@ -32,6 +32,7 @@ import Reminders from './components/Reminders';
 import AdvancedAnalytics from './components/AdvancedAnalytics';
 import ExportData from './components/ExportData';
 import WalletManager from './components/WalletManager';
+import TransactionList from './components/TransactionList';
 import ProfileModal from './components/ProfileModal';
 import Toast from './components/Toast';
 import ConfirmModal from './components/ConfirmModal';
@@ -44,7 +45,6 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [transactions, setTransactions] = useState([]);
   const [installments, setInstallments] = useState([]);
-  const [filter, setFilter] = useState('all');
   const [wallets, setWallets] = useState([]);
   const [activeTab, setActiveTab] = useState('dashboard'); // 'dashboard', 'transactions', 'savings', 'installments', 'reminders', 'analytics'
   const [rates, setRates] = useState({ USD: 0.000062, EUR: 0.000057, SGD: 0.000083 });
@@ -625,15 +625,6 @@ export default function App() {
     return w ? w.name : id;
   };
 
-  const filteredTransactions = useMemo(() => {
-    return transactions.filter(t => {
-      if (filter === 'income') return t.type === 'income';
-      if (filter === 'expense') return t.type === 'expense';
-      if (filter === 'saving') return t.type === 'deposit' || t.type === 'withdraw';
-      return true;
-    });
-  }, [transactions, filter]);
-
   const userAvatarUrl = useMemo(() => {
     const oauthAvatar = session?.user?.user_metadata?.avatar_url || session?.user?.user_metadata?.picture;
     const customAvatar = profile?.avatar_url || session?.user?.user_metadata?.custom_avatar_url;
@@ -982,55 +973,13 @@ export default function App() {
               t={t}
             />
             
-            <div className="card">
-              <div className="list-header">
-                <h2 style={{ fontSize: '1.25rem', fontWeight: 600 }}>Riwayat Keuangan</h2>
-                <div className="filter-tabs">
-                  <button className={`btn-filter ${filter === 'all' ? 'active' : ''}`} onClick={() => setFilter('all')}>Semua</button>
-                  <button className={`btn-filter ${filter === 'income' ? 'active' : ''}`} onClick={() => setFilter('income')}>Masuk</button>
-                  <button className={`btn-filter ${filter === 'expense' ? 'active' : ''}`} onClick={() => setFilter('expense')}>Keluar</button>
-                  <button className={`btn-filter ${filter === 'saving' ? 'active' : ''}`} onClick={() => setFilter('saving')}>Tabungan</button>
-                </div>
-              </div>
-
-              <div className="list-items">
-                {filteredTransactions.length === 0 ? (
-                  <div className="empty-state">Belum ada catatan keuangan.</div>
-                ) : (
-                  filteredTransactions.map(tx => (
-                    <div key={tx.id} className="list-item">
-                      <div className="item-info">
-                        <span className="item-title">{tx.title}</span>
-                        <span className="item-meta">
-                          {tx.type === 'transfer' ? (
-                            `Transfer: ${getWalletName(tx.payment_method)} → ${getWalletName(tx.category)}`
-                          ) : (
-                            `${tx.category} • ${getWalletName(tx.payment_method)}`
-                          )} • {tx.date}
-                        </span>
-                      </div>
-                      <div className="item-amount-action">
-                        <span className={`item-amount ${
-                          tx.type === 'income' ? 'income' : 
-                          tx.type === 'expense' ? 'expense' : 
-                          tx.type === 'deposit' ? 'expense' : 
-                          tx.type === 'transfer' ? 'saving' : 'income'
-                        }`}>
-                          {tx.type === 'income' || tx.type === 'withdraw' ? '+' : tx.type === 'transfer' ? '⇄' : '-'} {formatIDR(tx.amount)}
-                        </span>
-                        <button 
-                          onClick={() => handleDeleteTransaction(tx.id)}
-                          className="btn-delete"
-                          title="Hapus"
-                        >
-                          <Trash2 size={16} />
-                        </button>
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
-            </div>
+            <TransactionList 
+              transactions={transactions}
+              formatIDR={formatIDR}
+              getWalletName={getWalletName}
+              onDeleteTransaction={handleDeleteTransaction}
+              t={t}
+            />
           </div>
         )}
 

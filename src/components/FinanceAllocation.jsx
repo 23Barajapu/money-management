@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { usePaydayCycle } from '../hooks/usePaydayCycle';
 
 export default function FinanceAllocation({ monthlyIncome = 0, transactions = [], formatIDR, paydayDate = 1, currency = 'IDR', onOpenProfile }) {
   const [showDetails, setShowDetails] = useState(false);
@@ -16,55 +17,9 @@ export default function FinanceAllocation({ monthlyIncome = 0, transactions = []
   };
 
   // Compute current cycle transactions (Income & Expense Allocation)
-  const { totalCycleIncome, spentPokok, spentBebas, spentInvestasi, savedDarurat } = useMemo(() => {
-    const now = new Date();
-    let cycleStart, cycleEnd;
-    const pDate = parseInt(paydayDate);
+  const { totalCycleIncome, spentPokok, spentBebas, spentInvestasi, savedDarurat } = usePaydayCycle(transactions, paydayDate);
 
-    if (now.getDate() >= pDate) {
-      cycleStart = new Date(now.getFullYear(), now.getMonth(), pDate);
-      cycleEnd = new Date(now.getFullYear(), now.getMonth() + 1, pDate - 1, 23, 59, 59);
-    } else {
-      cycleStart = new Date(now.getFullYear(), now.getMonth() - 1, pDate);
-      cycleEnd = new Date(now.getFullYear(), now.getMonth(), pDate - 1, 23, 59, 59);
-    }
-
-    let cycleInc = 0;
-    let pokok = 0;
-    let bebas = 0;
-    let investasi = 0;
-    let darurat = 0;
-
-    transactions.forEach(t => {
-      const d = new Date(t.date);
-      if (d >= cycleStart && d <= cycleEnd) {
-        if (t.type === 'income') {
-          cycleInc += t.amount;
-        } else if (t.type === 'expense' || t.type === 'deposit') {
-          const cat = (t.category || '').toLowerCase();
-          if (cat.includes('investasi') || cat.includes('saham') || cat.includes('crypto') || cat.includes('reksa') || cat.includes('emas')) {
-            investasi += t.amount;
-          } else if (cat.includes('hiburan') || cat.includes('belanja') || cat.includes('gaya')) {
-            bebas += t.amount;
-          } else if (t.type === 'deposit' || cat.includes('tabungan') || cat.includes('darurat')) {
-            darurat += t.amount;
-          } else {
-            pokok += t.amount;
-          }
-        }
-      }
-    });
-
-    return { 
-      totalCycleIncome: cycleInc, 
-      spentPokok: pokok, 
-      spentBebas: bebas, 
-      spentInvestasi: investasi, 
-      savedDarurat: darurat 
-    };
-  }, [transactions, paydayDate]);
-
-  // Income used for allocation is strictly the manual monthly income set in Profile
+  // Compute allocated budgets based on monthlyIncome (50/30/15/5 rule)
   const income = Math.max(0, Number(monthlyIncome) || 0);
   const pokokLimit = income * 0.50; // 50%
   const bebasLimit = income * 0.05; // 5%
