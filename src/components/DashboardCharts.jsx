@@ -30,7 +30,7 @@ ChartJS.register(
   BarController
 );
 
-export default function DashboardCharts({ transactions = [], paydayDate = 1, formatIDR, budgets = [] }) {
+export default function DashboardCharts({ transactions = [], paydayDate = 1, formatIDR, budgets = [], t = (k) => k }) {
   const currentYear = new Date().getFullYear();
   const monthLabels = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
 
@@ -142,11 +142,11 @@ export default function DashboardCharts({ transactions = [], paydayDate = 1, for
     <div className="card" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
         <div>
-          <h3 style={{ fontSize: '1.1rem', fontWeight: 600, color: 'var(--text-primary)', margin: 0 }}>Income & Expenses</h3>
-          <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Interactive Incomes and categories</span>
+          <h3 style={{ fontSize: '1.1rem', fontWeight: 600, color: 'var(--text-primary)', margin: 0 }}>{t('incomeVsExpenses')}</h3>
+          <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{t('interactiveIncomes')}</span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'rgba(255,255,255,0.04)', border: '1px solid var(--border-color)', padding: '0.35rem 0.75rem', borderRadius: '0.5rem', fontSize: '0.75rem', color: 'var(--text-secondary)', cursor: 'pointer' }}>
-          <span>Tahun Ini, {currentYear}</span>
+          <span>{t('thisYear')}, {currentYear}</span>
           <ChevronDown size={14} />
         </div>
       </div>

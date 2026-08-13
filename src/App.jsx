@@ -904,7 +904,12 @@ export default function App() {
 
             {/* ROW 2: Interactive Combo Chart & Recent Transactions */}
             <div className="dashboard-row-2">
-              <DashboardCharts transactions={transactions} paydayDate={profile?.payday_date || 1} formatIDR={formatIDR} />
+              <DashboardCharts 
+                transactions={transactions} 
+                paydayDate={profile?.payday_date || 1} 
+                formatIDR={formatIDR} 
+                t={t}
+              />
 
               {/* Recent Transactions Box */}
               <div className="card" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
