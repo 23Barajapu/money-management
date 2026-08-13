@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useMemo } from 'react';
 import { 
   Chart as ChartJS, 
   ArcElement, 
@@ -31,15 +31,22 @@ ChartJS.register(
 );
 
 export default function DashboardCharts({ transactions = [], paydayDate = 1, formatIDR, budgets = [], t = (k) => k }) {
-  const currentYear = new Date().getFullYear();
+  const currentActualYear = new Date().getFullYear();
+  const [selectedYear, setSelectedYear] = useState(currentActualYear);
   const monthLabels = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
 
-  // Calculate monthly income and expense for the current year
+  const availableYears = useMemo(() => {
+    const years = transactions.map(t => new Date(t.date).getFullYear());
+    years.push(currentActualYear);
+    return [...new Set(years)].sort((a, b) => b - a);
+  }, [transactions, currentActualYear]);
+
+  // Calculate monthly income and expense for the selected year
   const monthlyIncome = monthLabels.map((_, idx) => {
     return transactions
       .filter(t => {
         const d = new Date(t.date);
-        return d.getFullYear() === currentYear && d.getMonth() === idx && t.type === 'income';
+        return d.getFullYear() === selectedYear && d.getMonth() === idx && t.type === 'income';
       })
       .reduce((sum, t) => sum + t.amount, 0);
   });
@@ -48,7 +55,7 @@ export default function DashboardCharts({ transactions = [], paydayDate = 1, for
     return transactions
       .filter(t => {
         const d = new Date(t.date);
-        return d.getFullYear() === currentYear && d.getMonth() === idx && (t.type === 'expense' || t.type === 'deposit');
+        return d.getFullYear() === selectedYear && d.getMonth() === idx && (t.type === 'expense' || t.type === 'deposit');
       })
       .reduce((sum, t) => sum + t.amount, 0);
   });
@@ -145,9 +152,29 @@ export default function DashboardCharts({ transactions = [], paydayDate = 1, for
           <h3 style={{ fontSize: '1.1rem', fontWeight: 600, color: 'var(--text-primary)', margin: 0 }}>{t('incomeVsExpenses')}</h3>
           <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{t('interactiveIncomes')}</span>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'rgba(255,255,255,0.04)', border: '1px solid var(--border-color)', padding: '0.35rem 0.75rem', borderRadius: '0.5rem', fontSize: '0.75rem', color: 'var(--text-secondary)', cursor: 'pointer' }}>
-          <span>{t('thisYear')}, {currentYear}</span>
-          <ChevronDown size={14} />
+        <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+          <select 
+            value={selectedYear} 
+            onChange={e => setSelectedYear(parseInt(e.target.value))}
+            style={{ 
+              appearance: 'none', 
+              background: 'rgba(255,255,255,0.04)', 
+              border: '1px solid var(--border-color)', 
+              padding: '0.35rem 2rem 0.35rem 0.75rem', 
+              borderRadius: '0.5rem', 
+              fontSize: '0.75rem', 
+              color: 'var(--text-secondary)', 
+              cursor: 'pointer',
+              outline: 'none'
+            }}
+          >
+            {availableYears.map(year => (
+              <option key={year} value={year} style={{ background: 'var(--bg-secondary)', color: 'var(--text-primary)' }}>
+                {year === currentActualYear ? `${t('thisYear')}, ${year}` : year}
+              </option>
+            ))}
+          </select>
+          <ChevronDown size={14} style={{ position: 'absolute', right: '0.5rem', color: 'var(--text-secondary)', pointerEvents: 'none' }} />
         </div>
       </div>
 
