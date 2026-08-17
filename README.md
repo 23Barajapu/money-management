@@ -1,5 +1,12 @@
 # Money Management
 
+![React](https://img.shields.io/badge/React-19-61DAFB?style=flat-square&logo=react&logoColor=black)
+![Vite](https://img.shields.io/badge/Vite-8-646CFF?style=flat-square&logo=vite&logoColor=white)
+![Supabase](https://img.shields.io/badge/Database-Supabase-3ECF8E?style=flat-square&logo=supabase&logoColor=white)
+![Platform](https://img.shields.io/badge/Platform-Web%20Browser-0078D4?style=flat-square)
+![License](https://img.shields.io/badge/License-MIT-4c1?style=flat-square)
+![i18n](https://img.shields.io/badge/i18n-ID%20%7C%20EN-informational?style=flat-square)
+
 Aplikasi manajemen dan perencanaan keuangan personal berbasis web yang dibangun dengan arsitektur React, Vite, dan Supabase. Sistem ini dirancang untuk menangani pencatatan arus kas, alokasi anggaran berbasis siklus penggajian (*payday cycle*), pelacakan multi-rekening, kalkulasi bunga harian, serta otomasi tagihan dan cicilan.
 
 ---
