@@ -1,73 +1,73 @@
 # Money Management
 
-Aplikasi catatan keuangan pribadi berbasis React, Vite, dan Supabase. Bisa catat pemasukan/pengeluaran, kelola banyak dompet sekaligus, pantau cicilan & tagihan, set target tabungan, dan kirim laporan keuangan ke email.
+Aplikasi manajemen dan perencanaan keuangan personal berbasis web yang dibangun dengan arsitektur React, Vite, dan Supabase. Sistem ini dirancang untuk menangani pencatatan arus kas, alokasi anggaran berbasis siklus penggajian (*payday cycle*), pelacakan multi-rekening, kalkulasi bunga harian, serta otomasi tagihan dan cicilan.
 
 ---
 
-## Overview Tampilan (UI Preview)
+## Preview Antarmuka
 
 ![Dashboard Overview](./docs/dashboard-preview.png)
 
 ---
 
-## Fitur
+## Fitur Utama
 
-- **Pencatatan Transaksi**
-  - Catat pemasukan, pengeluaran, transfer antar dompet, setoran dan penarikan tabungan.
-  - Filter riwayat per jenis transaksi.
+### 1. Manajemen Transaksi & Aliran Dana
+- Mendukung pencatatan pemasukan, pengeluaran, transfer antar-dompet, serta mutasi tabungan (setor/tarik).
+- Deteksi dan validasi batas saldo per dompet secara *real-time* saat penginputan transaksi.
+- Filter riwayat transaksi dinamis berdasarkan tipe mutasi dan kategori.
 
-- **Multi-Wallet**
-  - Buat dompet sendiri — Gopay, OVO, rekening bank, atau apapun.
-  - Transfer saldo antar dompet, saldo masing-masing dompet dihitung otomatis dari riwayat transaksi.
+### 2. Multi-Wallet & Rekening
+- Pengelolaan dompet tanpa batas (Kas Tunai, Rekening Bank, E-Wallet, dan platform investasi).
+- Kalkulasi saldo aktual teragregasi secara otomatis dari riwayat transaksi debit/kredit.
+- Integrasi kalkulator pendapatan bunga harian SeaBank yang otomatis tercatat ke riwayat mutasi.
 
-- **Tagihan & Cicilan**
-  - Catat tagihan rutin dengan tanggal jatuh tempo, tandai sudah/belum bayar.
-  - Lacak cicilan panjang — lihat progres pembayaran dan cicilan tersisa.
-  - Transaksi berulang (harian/mingguan/bulanan) dicatat otomatis tiap login.
-  - Pilih dompet mana yang dipakai saat bayar tagihan atau cicilan.
-  - **Notifikasi Tagihan (H-5)**: Indikator lonceng interaktif di navbar yang otomatis mengingatkan tagihan yang mendekati jatuh tempo ($\le 5$ hari) beserta popover detail.
+### 3. Alokasi Anggaran & Siklus Penggajian (50-5-30-15 Rule)
+- Kalkulasi alokasi finansial otomatis berdasarkan pendapatan bulanan:
+  - 50% Kebutuhan Pokok
+  - 5% Kebutuhan Bebas / Gaya Hidup
+  - 30% Tabungan & Investasi
+  - 15% Dana Darurat
+- Penyesuaian rentang anggaran mengikuti tanggal siklus gajian (*Payday Date*) pengguna.
+- Sistem peringatan dini (*alert threshold*) saat pengeluaran mendekati atau melampaui batas alokasi pos terkait.
+- Pemantauan target tabungan dengan penentuan *deadline* dan pencatatan sumber dana mutasi.
 
-- **Multi-Language (Auto Device Language)**
-  - Otomatis menyesuaikan bahasa antarmuka web dengan bahasa perangkat pengguna (*Bahasa Indonesia / English*).
-  - Dilengkapi opsi *override* manual pada menu profil.
+### 4. Tagihan, Cicilan, dan Transaksi Berulang
+- Pelacakan tagihan berkala dengan notifikasi jatuh tempo otomatis (H-5) pada antarmuka pengguna.
+- Manajemen tenor cicilan beserta kalkulasi progres pelunasan dan sisa beban kewajiban.
+- Otomasi eksekusi transaksi berulang (*daily*, *weekly*, *monthly*) saat autentikasi sesi pengguna.
 
-- **Anggaran & Tabungan**
-  - **Alokasi Keuangan 50-5-30-15**: Kalkulasi otomatis alokasi keuangan ideal (50% Kebutuhan Pokok, 5% Kebutuhan Bebas, 30% Investasi, 15% Dana Darurat) berdasarkan penghasilan bulanan, lengkap dengan indikator realisasi transaksi & checklist disiplin bulanan.
-  - Pasang batas pengeluaran per kategori, ada peringatan kalau sudah mendekati/melewati batas.
-  - Buat beberapa target tabungan sekaligus dengan tanggal target deadline & opsi setor/tarik custom.
-  - Kalkulasi anggaran mengikuti siklus gajian yang sudah diatur.
+### 5. Analisis & Visualisasi Data
+- Visualisasi arus kas tahunan interaktif menggunakan grafik kombinasi (Bar & Line Chart) dengan selektor tahun.
+- Analisis tren pengeluaran 14 hari terakhir dan perbandingan performa kas bulan berjalan terhadap periode sebelumnya.
+- Kalkulasi proyeksi ketahanan dana (*runway estimate*) berdasarkan rerata *burn rate* harian.
 
-- **Analisis Keuangan**
-  - Grafik arus kas 6 bulan terakhir dan tren pengeluaran 14 hari.
-  - Estimasi rata-rata pengeluaran harian, sisa hari dana bertahan, dan proyeksi bulan depan berdasarkan pola transaksi sebelumnya.
-  - Data grafik di dasbor di-reset otomatis sesuai siklus gajian.
+### 6. Ekspor Data & Pelaporan
+- Ekspor rekapitulasi data transaksi ke format CSV, JSON, dan dokumen PDF terstruktur.
+- Fitur pengiriman salinan laporan berkas PDF langsung ke alamat email terdaftar.
 
-- **Ekspor & Laporan**
-  - Unduh riwayat transaksi ke CSV, JSON, atau PDF.
-  - Kirim laporan keuangan ke email terdaftar — PDF terlampir langsung di inbox.
-
-- **Pengaturan Akun**
-  - Atur **Penghasilan Bersih Bulanan** pada profil sebagai acuan dasar alokasi keuangan 50-5-30-15.
-  - Atur tanggal gajian (1–31) untuk menyesuaikan periode kalkulasi anggaran dan dasbor.
-  - Reset sandi via link email dari Supabase.
-  - Kelola preferensi notifikasi email dan push.
-
-- **Keamanan**
-  - Sesi otomatis logout setelah 1 menit tidak ada aktivitas.
-  - Semua data terisolasi per akun dengan Row Level Security (RLS) Supabase.
-  - Zero native browser popup — semua notifikasi pakai komponen UI sendiri.
+### 7. Internasionalisasi & Multi-Mata Uang
+- Deteksi otomatis preferensi bahasa mengikuti konfigurasi perangkat (*Auto Device Language: ID / EN*) dengan opsi pergantian manual.
+- Dukungan konversi multi-mata uang (*IDR, USD, EUR, SGD*) dengan sistem *currency input formatter* terstandarisasi.
 
 ---
 
-## Tech Stack
+## Arsitektur & Tech Stack
 
-| Layer | Library |
+| Komponen | Teknologi / Pustaka |
 | --- | --- |
-| Frontend | React 18 + Vite |
-| Database & Auth | Supabase (PostgreSQL + Auth) |
-| Charts | Chart.js via react-chartjs-2 |
-| PDF | jsPDF + jspdf-autotable |
-| Email | FormSubmit (multipart/form-data) |
-| Icons | Lucide React |
+| Frontend Framework | React 18 (Vite Build Tool) |
+| Database & Authentication | Supabase (PostgreSQL, GoTrue Auth, Row Level Security) |
+| Visualisasi Data | Chart.js & react-chartjs-2 |
+| Utilitas PDF | jsPDF & jspdf-autotable |
+| Sanitasi Data & DOM | DOMPurify |
+| Ikonografi | Lucide React |
+| Layanan Email | FormSubmit Integration |
 
 ---
+
+## Keamanan
+
+- **Row Level Security (RLS):** Seluruh entitas tabel di PostgreSQL diisolasi penuh per `user_id`. Pengguna hanya memiliki hak akses baca dan tulis pada data milik sendiri.
+- **Inactivity Timeout:** Sesi otomatis diakhiri jika tidak terdeteksi interaksi pengguna dalam interval waktu 1 menit untuk mencegah akses tidak sah pada perangkat bersama.
+- **Client-side Sanitization:** Data string dari input pengguna diproses dan disanitasi sebelum dimasukkan ke dalam DOM maupun dokumen laporan.
