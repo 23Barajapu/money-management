@@ -59,20 +59,6 @@ Aplikasi manajemen dan perencanaan keuangan personal berbasis web yang dibangun 
 
 ---
 
-## Arsitektur & Tech Stack
-
-| Komponen | Teknologi / Pustaka |
-| --- | --- |
-| Frontend Framework | React 18 (Vite Build Tool) |
-| Database & Authentication | Supabase (PostgreSQL, GoTrue Auth, Row Level Security) |
-| Visualisasi Data | Chart.js & react-chartjs-2 |
-| Utilitas PDF | jsPDF & jspdf-autotable |
-| Sanitasi Data & DOM | DOMPurify |
-| Ikonografi | Lucide React |
-| Layanan Email | FormSubmit Integration |
-
----
-
 ## Keamanan
 
 - **Row Level Security (RLS):** Seluruh entitas tabel di PostgreSQL diisolasi penuh per `user_id`. Pengguna hanya memiliki hak akses baca dan tulis pada data milik sendiri.
