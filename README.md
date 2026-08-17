@@ -71,3 +71,10 @@ Aplikasi manajemen dan perencanaan keuangan personal berbasis web yang dibangun 
 - **Row Level Security (RLS):** Seluruh entitas tabel di PostgreSQL diisolasi penuh per `user_id`. Pengguna hanya memiliki hak akses baca dan tulis pada data milik sendiri.
 - **Inactivity Timeout:** Sesi otomatis diakhiri jika tidak terdeteksi interaksi pengguna dalam interval waktu 1 menit untuk mencegah akses tidak sah pada perangkat bersama.
 - **Client-side Sanitization:** Data string dari input pengguna diproses dan disanitasi sebelum dimasukkan ke dalam DOM maupun dokumen laporan.
+
+---
+
+## Lisensi
+
+Proyek ini didistribusikan di bawah lisensi [MIT License](LICENSE). Silakan lihat berkas `LICENSE` untuk informasi hak cipta dan ketentuan penggunaan lebih lanjut.
+
