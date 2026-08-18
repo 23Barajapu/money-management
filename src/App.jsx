@@ -1,23 +1,14 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { 
-  PiggyBank, 
   ArrowUpCircle, 
   ArrowDownCircle, 
-  Trash2, 
   Wallet, 
   RefreshCw, 
   LogOut, 
-  LayoutDashboard, 
-  History, 
-  CreditCard,
-  Calendar,
   TrendingUp,
   User,
   UserX,
-  Search,
   Bell,
-  ChevronRight,
-  ArrowUpRight,
   Send,
   MoreHorizontal,
   Plus
@@ -50,7 +41,6 @@ export default function App() {
   const [rates, setRates] = useState({ USD: 0.000062, EUR: 0.000057, SGD: 0.000083 });
   const [currency, setCurrency] = useState('IDR');
   const [langOption, setLangOption] = useState('auto');
-  const [searchQuery, setSearchQuery] = useState('');
   const [bills, setBills] = useState([]);
   const [selectedFormType, setSelectedFormType] = useState('income');
   const [showNotifMenu, setShowNotifMenu] = useState(false);
@@ -423,23 +413,6 @@ export default function App() {
       showToast('Transaksi berhasil dihapus', 'info');
     } catch (err) {
       showToast('Gagal menghapus transaksi: ' + err.message, 'error');
-    }
-  };
-
-  const handleUpdateSavings = async (updatedSavings, transactionAmount, type) => {
-    if (transactionAmount && type) {
-      const newTx = {
-        id: Date.now().toString(),
-        type,
-        title: type === 'deposit' ? `Setoran: ${updatedSavings.goalName}` : `Penarikan: ${updatedSavings.goalName}`,
-        amount: transactionAmount,
-        category: 'Tabungan',
-        date: new Date().toISOString().split('T')[0],
-        payment_method: 'cashless'
-      };
-      await handleAddTransaction(newTx);
-    } else {
-      await updateSavingsInDB(updatedSavings);
     }
   };
 
