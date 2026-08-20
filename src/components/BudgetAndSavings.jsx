@@ -181,13 +181,22 @@ export default function BudgetAndSavings({ transactions, formatIDR, paydayDate =
     }
   };
 
+  const getFundedWalletId = () => {
+    const funded = wallets.filter(w => (w.balance || 0) > 0);
+    if (funded.length > 0) {
+      return funded.reduce((max, w) => ((w.balance || 0) > (max.balance || 0) ? w : max), funded[0]).id;
+    }
+    return wallets[0]?.id || 'wallet_cash';
+  };
+
   const handleUpdateSaved = async (goal, amountChange, walletId = null) => {
     try {
+      const targetWalletId = walletId || getFundedWalletId();
       const updatedSaved = Math.max(0, goal.current_saved + amountChange);
       const { error } = await supabase.from('savings_goals').update({ current_saved: updatedSaved }).eq('id', goal.id);
       if (error) throw error;
       
-      if (walletId && onAddTransaction) {
+      if (targetWalletId && onAddTransaction) {
         const isDeposit = amountChange > 0;
         await onAddTransaction({
           id: Date.now().toString(),
@@ -196,7 +205,7 @@ export default function BudgetAndSavings({ transactions, formatIDR, paydayDate =
           amount: Math.abs(amountChange),
           category: 'Tabungan Darurat',
           date: new Date().toISOString().split('T')[0],
-          payment_method: walletId
+          payment_method: targetWalletId
         });
       } else {
         if (showToast) showToast('Saldo tabungan diperbarui!', 'success');
@@ -331,7 +340,7 @@ export default function BudgetAndSavings({ transactions, formatIDR, paydayDate =
               }
 
               const handleCustomUpdatePrompt = (isDeposit) => {
-                setCustomAction({ isOpen: true, goal: g, isDeposit, walletId: '' });
+                setCustomAction({ isOpen: true, goal: g, isDeposit, walletId: getFundedWalletId() });
                 resetCustomAmount();
               };
 

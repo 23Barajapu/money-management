@@ -27,6 +27,14 @@ export default function Reminders({ onAddTransaction, formatIDR, wallets = [], i
   const [selectedBillWallet, setSelectedBillWallet] = useState({});
   const [selectedInstWallet, setSelectedInstWallet] = useState({});
 
+  const getFundedWalletId = () => {
+    const funded = wallets.filter(w => (w.balance || 0) > 0);
+    if (funded.length > 0) {
+      return funded.reduce((max, w) => ((w.balance || 0) > (max.balance || 0) ? w : max), funded[0]).id;
+    }
+    return wallets[0]?.id || 'wallet_cash';
+  };
+
   const categories = ['Makanan', 'Transportasi', 'Hiburan', 'Belanja', 'Kesehatan', 'Edukasi', 'Lainnya'];
 
   useEffect(() => {
@@ -212,7 +220,7 @@ export default function Reminders({ onAddTransaction, formatIDR, wallets = [], i
 
   const handlePayBill = async (bill) => {
     if (bill.is_paid) return;
-    const walletId = selectedBillWallet[bill.id] || (wallets[0]?.id || 'wallet_cash');
+    const walletId = selectedBillWallet[bill.id] || getFundedWalletId();
     const chosenWallet = wallets.find(w => w.id === walletId);
     
     if (chosenWallet && bill.amount > chosenWallet.balance) {
@@ -276,7 +284,7 @@ export default function Reminders({ onAddTransaction, formatIDR, wallets = [], i
 
   const handlePayInstallmentFromReminder = async (inst) => {
     if (!onPayInstallment) return;
-    const walletId = selectedInstWallet[inst.id] || (wallets[0]?.id || 'wallet_cash');
+    const walletId = selectedInstWallet[inst.id] || getFundedWalletId();
     const chosenWallet = wallets.find(w => w.id === walletId);
 
     if (chosenWallet && inst.monthlyPayment > chosenWallet.balance) {
@@ -432,7 +440,7 @@ export default function Reminders({ onAddTransaction, formatIDR, wallets = [], i
               ) : (
                 displayBills.map(b => {
                   const isOverdue = new Date(b.due_date) < new Date() && !b.is_paid;
-                  const currentWId = selectedBillWallet[b.id] || (wallets[0]?.id || 'wallet_cash');
+                  const currentWId = selectedBillWallet[b.id] || getFundedWalletId();
                   return (
                     <div key={b.id} style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem', background: b.is_paid ? 'rgba(16, 185, 129, 0.03)' : isOverdue ? 'rgba(239, 68, 68, 0.03)' : 'rgba(255,255,255,0.02)', padding: '0.85rem 1rem', borderRadius: '0.75rem', border: `1px solid ${b.is_paid ? 'var(--income-color)' : isOverdue ? 'var(--expense-color)' : 'var(--border-color)'}` }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
@@ -492,7 +500,7 @@ export default function Reminders({ onAddTransaction, formatIDR, wallets = [], i
                 {activeInstallments.map(inst => {
                   const remaining = inst.totalAmount - inst.paidAmount;
                   const progress = Math.min(Math.round((inst.paidAmount / inst.totalAmount) * 100), 100);
-                  const currentInstWId = selectedInstWallet[inst.id] || (wallets[0]?.id || 'wallet_cash');
+                  const currentInstWId = selectedInstWallet[inst.id] || getFundedWalletId();
                   return (
                     <div key={inst.id} style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem', background: 'rgba(239, 68, 68, 0.02)', padding: '0.85rem 1rem', borderRadius: '0.75rem', border: '1px solid rgba(239, 68, 68, 0.2)' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>

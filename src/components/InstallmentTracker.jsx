@@ -14,11 +14,19 @@ export default function InstallmentTracker({
   const [customPayAmount, setCustomPayAmount] = useState({});
   const [selectedWallet, setSelectedWallet] = useState({});
 
+  const getFundedWalletId = () => {
+    const funded = wallets.filter(w => (w.balance || 0) > 0);
+    if (funded.length > 0) {
+      return funded.reduce((max, w) => ((w.balance || 0) > (max.balance || 0) ? w : max), funded[0]).id;
+    }
+    return wallets[0]?.id || 'wallet_cash';
+  };
+
   const handlePay = (inst, amount) => {
     const payVal = parseFloat(amount);
     if (isNaN(payVal) || payVal <= 0) return;
 
-    const walletId = selectedWallet[inst.id] || (wallets[0]?.id || 'wallet_cash');
+    const walletId = selectedWallet[inst.id] || getFundedWalletId();
     const chosenWallet = wallets.find(w => w.id === walletId);
 
     if (chosenWallet && payVal > chosenWallet.balance) {
@@ -64,7 +72,7 @@ export default function InstallmentTracker({
             const remaining = Math.max(0, total - paid);
             const progress = total > 0 ? Math.min(Math.round((paid / total) * 100), 100) : 0;
             const isSettled = remaining <= 0;
-            const currentWalletId = selectedWallet[inst.id] || (wallets[0]?.id || 'wallet_cash');
+            const currentWalletId = selectedWallet[inst.id] || getFundedWalletId();
 
             return (
               <div key={inst.id} style={{ background: 'rgba(15, 23, 42, 0.3)', border: '1px solid var(--border-color)', padding: '1rem', borderRadius: '0.75rem' }}>

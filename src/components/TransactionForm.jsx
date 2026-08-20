@@ -22,22 +22,44 @@ export default function TransactionForm({ onAddTransaction, wallets = [], curren
 
   const { displayValue, rawValue, handleChange: handleAmountChange, handleBlur: handleAmountBlur, reset: resetAmount } = useCurrencyInput(currency);
 
+  const formatBalance = (num) => {
+    if (currency === 'IDR') {
+      return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(num || 0);
+    }
+    return new Intl.NumberFormat('en-US', { style: 'currency', currency, maximumFractionDigits: 2 }).format(num || 0);
+  };
+
   // Fallback if wallets are not fetched yet
   const activeWallets = wallets.length > 0 ? wallets : [
-    { id: 'wallet_cash', name: 'Dompet Cash', type: 'cash' },
-    { id: 'wallet_cashless', name: 'Rekening Bank', type: 'cashless' }
+    { id: 'wallet_cash', name: 'Dompet Cash', type: 'cash', balance: 0 },
+    { id: 'wallet_cashless', name: 'Rekening Bank', type: 'cashless', balance: 0 }
   ];
+
+  const getBestFundedWalletId = (walletList, currentId = '') => {
+    if (!walletList || walletList.length === 0) return '';
+    if (currentId) {
+      const curr = walletList.find(w => w.id === currentId);
+      if (curr && (curr.balance || 0) > 0) return curr.id;
+    }
+    const funded = walletList.filter(w => (w.balance || 0) > 0);
+    if (funded.length > 0) {
+      return funded.reduce((max, w) => ((w.balance || 0) > (max.balance || 0) ? w : max), funded[0]).id;
+    }
+    return walletList[0].id;
+  };
 
   useEffect(() => {
     if (activeWallets.length > 0) {
-      if (!paymentMethod) {
-        setPaymentMethod(activeWallets[0].id);
+      const bestWallet = getBestFundedWalletId(activeWallets, paymentMethod);
+      if (!paymentMethod || (type !== 'income' && (!activeWallets.find(w => w.id === paymentMethod) || (activeWallets.find(w => w.id === paymentMethod)?.balance || 0) <= 0))) {
+        setPaymentMethod(bestWallet);
       }
-      if (!destinationWalletId && activeWallets.length > 1) {
-        setDestinationWalletId(activeWallets[1].id);
+      if (!destinationWalletId || destinationWalletId === (paymentMethod || bestWallet)) {
+        const dest = activeWallets.find(w => w.id !== (paymentMethod || bestWallet));
+        if (dest) setDestinationWalletId(dest.id);
       }
     }
-  }, [wallets]);
+  }, [wallets, type]);
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -270,28 +292,49 @@ export default function TransactionForm({ onAddTransaction, wallets = [], curren
         {type === 'transfer' ? (
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
             <div className="form-group">
-              <label>Dari Dompet</label>
-              <select value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value)} required>
-                {activeWallets.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
+              <label>Dari Dompet (Sumber)</label>
+              <select 
+                value={paymentMethod} 
+                onChange={(e) => {
+                  const newSource = e.target.value;
+                  setPaymentMethod(newSource);
+                  if (destinationWalletId === newSource) {
+                    const other = activeWallets.find(w => w.id !== newSource);
+                    if (other) setDestinationWalletId(other.id);
+                  }
+                }} 
+                required
+              >
+                {activeWallets.map(w => (
+                  <option key={w.id} value={w.id}>
+                    {w.name} ({formatBalance(w.balance)})
+                  </option>
+                ))}
               </select>
             </div>
             <div className="form-group">
-              <label>Ke Dompet</label>
+              <label>Ke Dompet (Tujuan)</label>
               <select value={destinationWalletId} onChange={(e) => setDestinationWalletId(e.target.value)} required>
-                {activeWallets.filter(w => w.id !== paymentMethod).map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
+                {activeWallets.filter(w => w.id !== paymentMethod).map(w => (
+                  <option key={w.id} value={w.id}>
+                    {w.name} ({formatBalance(w.balance)})
+                  </option>
+                ))}
               </select>
             </div>
           </div>
         ) : (
           <div className="form-group">
-            <label>Sumber Dompet / Rekening</label>
+            <label>{type === 'income' ? 'Masuk ke Dompet' : 'Sumber Dompet / Rekening'}</label>
             <select
               value={paymentMethod}
               onChange={(e) => setPaymentMethod(e.target.value)}
               required
             >
               {activeWallets.map(w => (
-                <option key={w.id} value={w.id}>{w.name} ({w.type === 'cash' ? 'Cash' : 'Cashless'})</option>
+                <option key={w.id} value={w.id}>
+                  {w.name} ({formatBalance(w.balance)})
+                </option>
               ))}
             </select>
           </div>
