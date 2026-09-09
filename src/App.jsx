@@ -715,9 +715,9 @@ export default function App() {
             </button>
 
             {showNotifMenu && (
-              <div className="notif-dropdown" style={{ position: 'absolute', right: 0, top: '125%', width: '320px', background: '#121824', border: '1px solid var(--border-color)', borderRadius: '12px', padding: '1rem', boxShadow: '0 10px 30px rgba(0,0,0,0.5)', zIndex: 1000 }}>
+              <div className="notif-dropdown">
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem', paddingBottom: '0.5rem', borderBottom: '1px solid var(--border-color)' }}>
-                  <strong style={{ fontSize: '0.85rem', color: '#fff', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                  <strong style={{ fontSize: '0.85rem', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
                     <Bell size={14} color="var(--expense-color)" /> {t('billReminders')}
                   </strong>
                   <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', background: 'rgba(255,255,255,0.05)', padding: '0.15rem 0.4rem', borderRadius: '4px' }}>
@@ -744,13 +744,13 @@ export default function App() {
                       return (
                         <div key={b.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(255,255,255,0.03)', padding: '0.6rem 0.75rem', borderRadius: '8px', border: isDanger ? '1px solid rgba(239, 68, 68, 0.3)' : '1px solid rgba(255, 255, 255, 0.05)' }}>
                           <div>
-                            <span style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#fff' }}>{b.name}</span>
+                            <span style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-primary)' }}>{b.name}</span>
                             <span style={{ display: 'block', fontSize: '0.72rem', color: isDanger ? '#ef4444' : '#f59e0b', fontWeight: 500 }}>
                               {statusText} • {b.due_date}
                             </span>
                           </div>
                           <div style={{ textAlign: 'right' }}>
-                            <span style={{ display: 'block', fontSize: '0.825rem', fontWeight: 700, color: '#fff' }}>{formatIDR(b.amount)}</span>
+                            <span style={{ display: 'block', fontSize: '0.825rem', fontWeight: 700, color: 'var(--text-primary)' }}>{formatIDR(b.amount)}</span>
                           </div>
                         </div>
                       );
@@ -772,7 +772,7 @@ export default function App() {
 
           <div style={{ position: 'relative' }}>
             <button 
-              onClick={() => setShowProfileMenu(!showProfileMenu)}
+              onClick={() => { setShowProfileMenu(!showProfileMenu); setShowNotifMenu(false); }}
               style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'rgba(255,255,255,0.04)', border: '1px solid var(--border-color)', padding: '0.35rem 0.6rem', borderRadius: '20px', cursor: 'pointer' }}
             >
               {userAvatarUrl ? (
@@ -787,20 +787,20 @@ export default function App() {
                   {session?.user?.email ? session.user.email[0].toUpperCase() : 'U'}
                 </div>
               )}
-              <span className="hide-on-mobile" style={{ fontSize: '0.8rem', color: '#fff', fontWeight: 500, maxWidth: '100px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              <span className="hide-on-mobile" style={{ fontSize: '0.8rem', color: 'var(--text-primary)', fontWeight: 500, maxWidth: '100px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                 {session?.user?.email ? session.user.email.split('@')[0] : 'User'}
               </span>
             </button>
 
             {showProfileMenu && (
-              <div className="profile-dropdown" style={{ right: 0, left: 'auto', top: '120%' }}>
-                <div className="profile-header" style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+              <div className="profile-dropdown">
+                <div className="profile-header">
                   {userAvatarUrl && (
-                    <img src={userAvatarUrl} alt="Avatar" style={{ width: '32px', height: '32px', borderRadius: '50%', objectFit: 'cover' }} />
+                    <img src={userAvatarUrl} alt="Avatar" style={{ width: '32px', height: '32px', borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
                   )}
-                  <div>
-                    <strong style={{ fontSize: '0.85rem', color: 'var(--text-primary)', display: 'block' }}>{t('yourAccount')}</strong>
-                    <span style={{ fontSize: '0.725rem', color: 'var(--text-secondary)', display: 'block' }}>{session?.user?.email}</span>
+                  <div style={{ minWidth: 0, overflow: 'hidden', flex: 1 }}>
+                    <strong style={{ fontSize: '0.85rem', color: 'var(--text-primary)', display: 'block', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{t('yourAccount')}</strong>
+                    <span style={{ fontSize: '0.725rem', color: 'var(--text-secondary)', display: 'block', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{session?.user?.email}</span>
                   </div>
                 </div>
                 <div className="profile-divider"></div>
