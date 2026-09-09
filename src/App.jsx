@@ -11,7 +11,9 @@ import {
   Bell,
   Send,
   MoreHorizontal,
-  Plus
+  Plus,
+  Sun,
+  Moon
 } from 'lucide-react';
 import { supabase } from './supabaseClient';
 import TransactionForm from './components/TransactionForm';
@@ -28,10 +30,12 @@ import ProfileModal from './components/ProfileModal';
 import Toast from './components/Toast';
 import ConfirmModal from './components/ConfirmModal';
 import Auth from './components/Auth';
+import QuickTextInput from './components/QuickTextInput';
 import { getTranslation, getDeviceLanguage } from './utils/i18n';
 import SeaBankInterestCalculator from './components/SeaBankInterestCalculator';
 
 export default function App() {
+  const [theme, setTheme] = useState(() => localStorage.getItem('mm_theme') || 'dark');
   const [session, setSession] = useState(null);
   const [loading, setLoading] = useState(true);
   const [transactions, setTransactions] = useState([]);
@@ -50,6 +54,15 @@ export default function App() {
   const [logoutMessage, setLogoutMessage] = useState('');
   const [toast, setToast] = useState({ message: '', type: 'info' });
   const [confirmState, setConfirmState] = useState({ isOpen: false, title: '', message: '', onConfirm: null, isDanger: false });
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem('mm_theme', theme);
+  }, [theme]);
+
+  const toggleTheme = () => {
+    setTheme(prev => (prev === 'dark' ? 'light' : 'dark'));
+  };
 
   const t = (key) => getTranslation(langOption, key);
 
@@ -377,6 +390,8 @@ export default function App() {
   const currentSaved = useMemo(() => totalDeposits - totalWithdrawals, 
     [totalDeposits, totalWithdrawals]);
 
+  const [editingTransaction, setEditingTransaction] = useState(null);
+
   // Sync savings currentSaved dynamically in DB if mismatched
 
   const handleAddTransaction = async (newTx) => {
@@ -399,6 +414,28 @@ export default function App() {
       showToast('Transaksi berhasil dicatat!', 'success');
     } catch (err) {
       showToast('Gagal menyimpan transaksi: ' + err.message, 'error');
+    }
+  };
+
+  const handleUpdateTransaction = async (updatedTx) => {
+    try {
+      const { error } = await supabase
+        .from('transactions')
+        .update({
+          type: updatedTx.type,
+          title: updatedTx.title,
+          amount: updatedTx.amount,
+          category: updatedTx.category,
+          date: updatedTx.date,
+          payment_method: updatedTx.payment_method || 'cash'
+        })
+        .eq('id', updatedTx.id);
+      if (error) throw error;
+      setTransactions(prev => prev.map(t => t.id === updatedTx.id ? updatedTx : t));
+      setEditingTransaction(null);
+      showToast('Transaksi berhasil diperbarui!', 'success');
+    } catch (err) {
+      showToast('Gagal memperbarui transaksi: ' + err.message, 'error');
     }
   };
 
@@ -651,6 +688,16 @@ export default function App() {
 
         {/* Header Right Actions */}
         <div className="header-right-actions">
+          {/* Theme Toggle Button (Dark/Light) */}
+          <button
+            className="icon-button-badge"
+            onClick={toggleTheme}
+            title={theme === 'dark' ? 'Ganti ke Mode Terang' : 'Ganti ke Mode Gelap'}
+            aria-label="Toggle Theme"
+          >
+            {theme === 'dark' ? <Sun size={17} color="#fbbf24" /> : <Moon size={17} color="#6366f1" />}
+          </button>
+
           {/* Notification Bell Dropdown (H-5 Reminders) */}
           <div style={{ position: 'relative' }}>
             <button 
@@ -866,6 +913,18 @@ export default function App() {
               </div>
             </div>
 
+            {/* Quick Text Transaction Input */}
+            <QuickTextInput
+              onAddTransaction={handleAddTransaction}
+              onOpenDetailedForm={(prefillData) => {
+                setSelectedFormType(prefillData?.type || 'expense');
+                setActiveTab('transactions');
+              }}
+              wallets={walletsWithUpdatedBalances}
+              currency={currency}
+              t={t}
+            />
+
             {/* ROW 2: Interactive Combo Chart & Recent Transactions */}
             <div className="dashboard-row-2">
               <DashboardCharts 
@@ -937,6 +996,9 @@ export default function App() {
           <div className="main-grid" style={{ gridTemplateColumns: '1fr' }}>
             <TransactionForm 
               onAddTransaction={handleAddTransaction} 
+              onUpdateTransaction={handleUpdateTransaction}
+              editingTransaction={editingTransaction}
+              onCancelEdit={() => setEditingTransaction(null)}
               wallets={walletsWithUpdatedBalances} 
               currency={currency} 
               initialType={selectedFormType} 
@@ -951,6 +1013,10 @@ export default function App() {
               formatIDR={formatIDR}
               getWalletName={getWalletName}
               onDeleteTransaction={handleDeleteTransaction}
+              onEditTransaction={(tx) => {
+                setEditingTransaction(tx);
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }}
               t={t}
             />
           </div>

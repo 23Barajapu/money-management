@@ -1,9 +1,23 @@
 import React, { useState, useEffect } from 'react';
 import { useCurrencyInput } from '../hooks/useCurrencyInput';
 import { usePaydayCycle } from '../hooks/usePaydayCycle';
-import { AlertTriangle } from 'lucide-react';
+import QuickTextInput from './QuickTextInput';
+import { AlertTriangle, Sparkles, SlidersHorizontal } from 'lucide-react';
 
-export default function TransactionForm({ onAddTransaction, wallets = [], currency = 'IDR', initialType = 'income', transactions = [], monthlyIncome = 0, paydayDate = 1, t = (k) => k }) {
+export default function TransactionForm({
+  onAddTransaction,
+  onUpdateTransaction,
+  editingTransaction = null,
+  onCancelEdit,
+  wallets = [],
+  currency = 'IDR',
+  initialType = 'income',
+  transactions = [],
+  monthlyIncome = 0,
+  paydayDate = 1,
+  t = (k) => k
+}) {
+  const [inputMode, setInputMode] = useState('quick'); // 'quick' or 'manual'
   const [type, setType] = useState(initialType); // 'income', 'expense', or 'transfer'
   const [title, setTitle] = useState('');
   const [category, setCategory] = useState('');
@@ -11,16 +25,29 @@ export default function TransactionForm({ onAddTransaction, wallets = [], curren
   const [paymentMethod, setPaymentMethod] = useState('');
   const [destinationWalletId, setDestinationWalletId] = useState('');
 
+  const { displayValue, rawValue, handleChange: handleAmountChange, handleBlur: handleAmountBlur, reset: resetAmount, setValue: setAmountValue } = useCurrencyInput(currency);
+
   useEffect(() => {
-    if (initialType) {
+    if (editingTransaction) {
+      setType(editingTransaction.type || 'expense');
+      setTitle(editingTransaction.title || '');
+      setAmountValue(editingTransaction.amount ? editingTransaction.amount.toString() : '');
+      setDate(editingTransaction.date || new Date().toISOString().split('T')[0]);
+      setPaymentMethod(editingTransaction.payment_method || '');
+      if (editingTransaction.type === 'transfer') {
+        setDestinationWalletId(editingTransaction.category || '');
+        setCategory('Transfer');
+      } else {
+        setCategory(editingTransaction.category || '');
+      }
+      setInputMode('manual');
+    } else if (initialType) {
       setType(initialType);
       if (initialType === 'income') setCategory('Gaji Utama');
       else if (initialType === 'expense') setCategory('Makanan Dasar');
       else if (initialType === 'transfer') setCategory('Transfer');
     }
-  }, [initialType]);
-
-  const { displayValue, rawValue, handleChange: handleAmountChange, handleBlur: handleAmountBlur, reset: resetAmount } = useCurrencyInput(currency);
+  }, [editingTransaction, initialType]);
 
   const formatBalance = (num) => {
     if (currency === 'IDR') {
@@ -65,15 +92,28 @@ export default function TransactionForm({ onAddTransaction, wallets = [], curren
     e.preventDefault();
     if (!title || !rawValue || (type !== 'transfer' && !category)) return;
 
-    onAddTransaction({
-      id: Date.now().toString(),
-      type,
-      title: type === 'transfer' ? (title || 'Transfer Saldo') : title,
-      amount: parseFloat(rawValue),
-      category: type === 'transfer' ? destinationWalletId : category,
-      date,
-      payment_method: paymentMethod,
-    });
+    if (editingTransaction && onUpdateTransaction) {
+      onUpdateTransaction({
+        ...editingTransaction,
+        type,
+        title: type === 'transfer' ? (title || 'Transfer Saldo') : title,
+        amount: parseFloat(rawValue),
+        category: type === 'transfer' ? destinationWalletId : category,
+        date,
+        payment_method: paymentMethod
+      });
+      if (onCancelEdit) onCancelEdit();
+    } else if (onAddTransaction) {
+      onAddTransaction({
+        id: Date.now().toString(),
+        type,
+        title: type === 'transfer' ? (title || 'Transfer Saldo') : title,
+        amount: parseFloat(rawValue),
+        category: type === 'transfer' ? destinationWalletId : category,
+        date,
+        payment_method: paymentMethod,
+      });
+    }
 
     setTitle('');
     resetAmount();
@@ -162,39 +202,71 @@ export default function TransactionForm({ onAddTransaction, wallets = [], curren
   const warningMsg = getWarningMessage();
   const allocInfo = getAllocationInfo(category, type);
 
+  const handlePrefillFromQuickText = (data) => {
+    if (data.type) setType(data.type);
+    if (data.title) setTitle(data.title);
+    if (data.amount) setAmountValue(data.amount);
+    if (data.category) setCategory(data.category);
+    if (data.paymentMethod) setPaymentMethod(data.paymentMethod);
+    if (data.destinationWalletId) setDestinationWalletId(data.destinationWalletId);
+    if (data.date) setDate(data.date);
+    setInputMode('manual');
+  };
+
   return (
-    <div className="card">
-      <h2 style={{ fontSize: '1.2rem', marginBottom: '1.25rem', fontWeight: 600 }}>Tambah Transaksi</h2>
-      <form onSubmit={handleSubmit}>
-        <div className="btn-group">
-          <button
-            type="button"
-            className={`btn-toggle income ${type === 'income' ? 'active' : ''}`}
-            onClick={() => { setType('income'); setCategory('Gaji Utama'); }}
-          >
-            Pemasukan
-          </button>
-          <button
-            type="button"
-            className={`btn-toggle expense ${type === 'expense' ? 'active' : ''}`}
-            onClick={() => { setType('expense'); setCategory('Makanan Dasar'); }}
-          >
-            Pengeluaran
-          </button>
-          <button
-            type="button"
-            className={`btn-toggle transfer ${type === 'transfer' ? 'active' : ''}`}
-            onClick={() => { setType('transfer'); setCategory('Transfer'); }}
-          >
-            Transfer
-          </button>
+    <div>
+      {/* Quick Text AI Input Widget (only when not in edit mode) */}
+      {!editingTransaction && (
+        <QuickTextInput
+          onAddTransaction={onAddTransaction}
+          onOpenDetailedForm={handlePrefillFromQuickText}
+          wallets={activeWallets}
+          currency={currency}
+          t={t}
+        />
+      )}
+
+      <div className="card">
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem' }}>
+          <h2 style={{ fontSize: '1.2rem', margin: 0, fontWeight: 600 }}>
+            {editingTransaction ? 'Edit Transaksi' : 'Form Detail Transaksi'}
+          </h2>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.8rem', color: editingTransaction ? '#818cf8' : 'var(--text-secondary)' }}>
+            <SlidersHorizontal size={14} />
+            <span>{editingTransaction ? 'Mode Edit' : 'Mode Manual'}</span>
+          </div>
         </div>
+
+        <form onSubmit={handleSubmit}>
+          <div className="btn-group">
+            <button
+              type="button"
+              className={`btn-toggle income ${type === 'income' ? 'active' : ''}`}
+              onClick={() => { setType('income'); setCategory('Gaji Utama'); }}
+            >
+              Pemasukan
+            </button>
+            <button
+              type="button"
+              className={`btn-toggle expense ${type === 'expense' ? 'active' : ''}`}
+              onClick={() => { setType('expense'); setCategory('Makanan Dasar'); }}
+            >
+              Pengeluaran
+            </button>
+            <button
+              type="button"
+              className={`btn-toggle transfer ${type === 'transfer' ? 'active' : ''}`}
+              onClick={() => { setType('transfer'); setCategory('Transfer'); }}
+            >
+              Transfer
+            </button>
+          </div>
 
         <div className="form-group">
           <label>Judul Transaksi</label>
           <input
             type="text"
-            placeholder={type === 'transfer' ? "e.g. Kirim Uang" : "e.g. Gaji Bulanan, Makan Siang"}
+            placeholder="Judul transaksi"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             required
@@ -368,10 +440,36 @@ export default function TransactionForm({ onAddTransaction, wallets = [], curren
           </div>
         )}
 
-        <button type="submit" className="btn-submit">
-          Simpan Transaksi
-        </button>
+        <div style={{ display: 'flex', gap: '0.75rem', marginTop: '1rem' }}>
+          {editingTransaction && onCancelEdit && (
+            <button
+              type="button"
+              onClick={onCancelEdit}
+              style={{
+                flex: 1,
+                padding: '0.75rem 1rem',
+                borderRadius: '8px',
+                border: '1px solid rgba(255, 255, 255, 0.15)',
+                background: 'rgba(255, 255, 255, 0.05)',
+                color: 'var(--text-secondary)',
+                fontWeight: 600,
+                cursor: 'pointer',
+                minHeight: '44px'
+              }}
+            >
+              Batal Edit
+            </button>
+          )}
+          <button
+            type="submit"
+            className="btn-submit"
+            style={{ flex: editingTransaction ? 2 : 1, minHeight: '44px' }}
+          >
+            {editingTransaction ? 'Simpan Perubahan' : 'Simpan Transaksi'}
+          </button>
+        </div>
       </form>
     </div>
+  </div>
   );
 }

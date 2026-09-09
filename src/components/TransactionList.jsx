@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
-import { Trash2 } from 'lucide-react';
+import { Trash2, Edit2 } from 'lucide-react';
 
-export default function TransactionList({ transactions = [], formatIDR, getWalletName, onDeleteTransaction, t = (k) => k }) {
+export default function TransactionList({ transactions = [], formatIDR, getWalletName, onDeleteTransaction, onEditTransaction, t = (k) => k }) {
   const [filter, setFilter] = useState('all');
 
   const filteredTransactions = useMemo(() => {
@@ -50,13 +50,25 @@ export default function TransactionList({ transactions = [], formatIDR, getWalle
                 }`}>
                   {tx.type === 'income' || tx.type === 'withdraw' ? '+' : tx.type === 'transfer' ? '⇄' : '-'} {formatIDR(tx.amount)}
                 </span>
-                <button 
-                  onClick={() => onDeleteTransaction(tx.id)}
-                  className="btn-delete"
-                  title="Hapus"
-                >
-                  <Trash2 size={16} />
-                </button>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                  {onEditTransaction && (
+                    <button 
+                      onClick={() => onEditTransaction(tx)}
+                      className="btn-delete"
+                      style={{ color: '#818cf8', borderColor: 'rgba(129, 140, 248, 0.3)' }}
+                      title="Edit Transaksi"
+                    >
+                      <Edit2 size={15} />
+                    </button>
+                  )}
+                  <button 
+                    onClick={() => onDeleteTransaction(tx.id)}
+                    className="btn-delete"
+                    title="Hapus"
+                  >
+                    <Trash2 size={15} />
+                  </button>
+                </div>
               </div>
             </div>
           ))

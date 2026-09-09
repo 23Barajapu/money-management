@@ -248,7 +248,7 @@ export default function Auth({ initialMessage = '' }) {
 
             <div style={{ position: 'relative', textAlign: 'center', margin: '1.5rem 0' }}>
               <div style={{ position: 'absolute', top: '50%', left: 0, right: 0, height: '1px', background: 'var(--border-color)', zIndex: 1 }}></div>
-              <span style={{ position: 'relative', background: '#0b0f19', padding: '0 0.75rem', fontSize: '0.75rem', color: 'var(--text-secondary)', zIndex: 2 }}>ATAU</span>
+              <span style={{ position: 'relative', background: 'var(--bg-card-solid, var(--bg-card, #ffffff))', padding: '0 0.75rem', fontSize: '0.75rem', color: 'var(--text-secondary)', zIndex: 2 }}>ATAU</span>
             </div>
 
             <button 
