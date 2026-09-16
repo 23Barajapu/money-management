@@ -276,19 +276,6 @@ export default function Reminders({ onAddTransaction, formatIDR, wallets = [], i
     }
   };
 
-  const advanceMonth = (dateStr) => {
-    if (!dateStr) return new Date().toISOString().split('T')[0];
-    const [year, month, day] = dateStr.split('-').map(Number);
-    const targetDate = new Date(year, month - 1 + 1, day);
-    if (targetDate.getDate() !== day) {
-      targetDate.setDate(0);
-    }
-    const y = targetDate.getFullYear();
-    const m = String(targetDate.getMonth() + 1).padStart(2, '0');
-    const d = String(targetDate.getDate()).padStart(2, '0');
-    return `${y}-${m}-${d}`;
-  };
-
   const handlePayBill = async (bill) => {
     if (bill.is_paid) return;
     const walletId = selectedBillWallet[bill.id] || getFundedWalletId();
