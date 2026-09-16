@@ -1,5 +1,16 @@
-import React from 'react';
-import { Wallet, Landmark, Smartphone, PiggyBank, PieChart, ShieldCheck } from 'lucide-react';
+import React, { useState, useMemo } from 'react';
+import { 
+  Wallet, 
+  Landmark, 
+  Smartphone, 
+  PiggyBank, 
+  PieChart, 
+  ShieldCheck, 
+  Layers,
+  Sparkles,
+  Percent,
+  TrendingUp
+} from 'lucide-react';
 
 export default function PortfolioDistribution({
   wallets = [],
@@ -11,23 +22,108 @@ export default function PortfolioDistribution({
   currency = 'IDR',
   t = (k) => k
 }) {
-  const totalSavings = savings.reduce((sum, s) => sum + (parseFloat(s.current_amount) || 0), 0);
-  const grandNetWorth = totalBalance + totalSavings;
+  const [selectedAssetId, setSelectedAssetId] = useState(null);
+  const [hoveredAssetId, setHoveredAssetId] = useState(null);
+  const [activeFilter, setActiveFilter] = useState('all'); // 'all', 'digital', 'cash', 'savings'
 
-  // Wallet colors palette for visual distinctiveness
+  const totalSavings = useMemo(() => {
+    return (savings || []).reduce((sum, s) => sum + (parseFloat(s.current_amount) || 0), 0);
+  }, [savings]);
+
+  const grandNetWorth = useMemo(() => {
+    return totalBalance + totalSavings;
+  }, [totalBalance, totalSavings]);
+
+  // Color palette for distinctive slices
   const colorPalette = [
     '#10b981', // Emerald
     '#06b6d4', // Cyan
-    '#8b5cf6', // Violet
+    '#8b5cf6', // Indigo / Purple
     '#f59e0b', // Amber
     '#ec4899', // Pink
     '#3b82f6', // Blue
     '#14b8a6', // Teal
-    '#f97316'  // Orange
+    '#f97316', // Orange
+    '#a855f7'  // Violet
   ];
 
-  const getWalletIcon = (w) => {
-    const nameLower = (w.name || '').toLowerCase();
+  // Consolidate all asset items
+  const allAssets = useMemo(() => {
+    const list = [];
+    
+    (wallets || []).forEach((w, i) => {
+      const share = grandNetWorth > 0 ? (w.balance / grandNetWorth) * 100 : 0;
+      list.push({
+        id: w.id || `wallet_${i}`,
+        name: w.name,
+        type: w.type === 'cash' ? 'cash' : 'digital',
+        typeLabel: w.type === 'cash' ? (t('cashAssets') || 'Tunai') : (t('digitalAssets') || 'Digital / Bank'),
+        balance: w.balance,
+        share: Math.max(0, share),
+        color: colorPalette[i % colorPalette.length],
+        isSeaBank: (w.name || '').toLowerCase().includes('seabank'),
+        isSaving: false
+      });
+    });
+
+    if (totalSavings > 0) {
+      const savingsShare = grandNetWorth > 0 ? (totalSavings / grandNetWorth) * 100 : 0;
+      list.push({
+        id: 'savings_group',
+        name: t('savingGoalsAssets') || 'Target Tabungan',
+        type: 'savings',
+        typeLabel: `${savings.length} Target Aktif`,
+        balance: totalSavings,
+        share: Math.max(0, savingsShare),
+        color: '#6366f1',
+        isSeaBank: false,
+        isSaving: true
+      });
+    }
+
+    return list;
+  }, [wallets, savings, totalSavings, grandNetWorth, t]);
+
+  // Filtered asset list
+  const filteredAssets = useMemo(() => {
+    if (activeFilter === 'digital') return allAssets.filter(a => a.type === 'digital');
+    if (activeFilter === 'cash') return allAssets.filter(a => a.type === 'cash');
+    if (activeFilter === 'savings') return allAssets.filter(a => a.type === 'savings');
+    return allAssets;
+  }, [allAssets, activeFilter]);
+
+  // SVG Donut calculation
+  const donutRadius = 70;
+  const donutCircumference = 2 * Math.PI * donutRadius; // ≈ 439.82
+
+  let accumulatedPercent = 0;
+  const donutSlices = useMemo(() => {
+    let currentOffset = 0;
+    return allAssets
+      .filter(a => a.balance > 0)
+      .map(a => {
+        const strokeDasharray = `${(a.share / 100) * donutCircumference} ${donutCircumference}`;
+        const strokeDashoffset = -currentOffset;
+        currentOffset += (a.share / 100) * donutCircumference;
+
+        return {
+          ...a,
+          strokeDasharray,
+          strokeDashoffset
+        };
+      });
+  }, [allAssets, donutCircumference]);
+
+  // Active highlighted asset (either hovered or clicked)
+  const activeAsset = useMemo(() => {
+    const targetId = hoveredAssetId || selectedAssetId;
+    if (!targetId) return null;
+    return allAssets.find(a => a.id === targetId) || null;
+  }, [hoveredAssetId, selectedAssetId, allAssets]);
+
+  const getWalletIcon = (asset) => {
+    if (asset.isSaving) return <PiggyBank size={18} />;
+    const nameLower = (asset.name || '').toLowerCase();
     if (nameLower.includes('bank') || nameLower.includes('bca') || nameLower.includes('mandiri') || nameLower.includes('bri') || nameLower.includes('bni') || nameLower.includes('jago') || nameLower.includes('seabank')) {
       return <Landmark size={18} />;
     }
@@ -37,204 +133,243 @@ export default function PortfolioDistribution({
     return <Wallet size={18} />;
   };
 
+  const liquidRatio = grandNetWorth > 0 ? (totalBalance / grandNetWorth) * 100 : 100;
+  const savedRatio = grandNetWorth > 0 ? (totalSavings / grandNetWorth) * 100 : 0;
+
   return (
-    <div className="card portfolio-distribution-card" style={{ marginBottom: '1.5rem' }}>
-      {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '1.25rem' }}>
+    <div className="card portfolio-card" style={{ marginBottom: '1.5rem', padding: '1.25rem' }}>
+      {/* Header Section */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem', marginBottom: '1.25rem' }}>
         <div>
-          <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--text-primary)', margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <PieChart size={18} color="var(--accent-color)" />
+          <h3 style={{ fontSize: '1.15rem', fontWeight: 700, color: 'var(--text-primary)', margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <PieChart size={20} color="var(--accent-color)" />
             {t('portfolioAllocation') || 'Distribusi & Alokasi Portofolio'}
           </h3>
           <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-            Breakdown komposisi aset likuid & alokasi dompet
+            Pantau alokasi aset likuid, dompet digital, dan target tabungan secara real-time
           </span>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <span style={{ fontSize: '0.75rem', padding: '0.25rem 0.6rem', borderRadius: '12px', background: 'rgba(16, 185, 129, 0.12)', color: '#10b981', fontWeight: 600 }}>
-            {wallets.length} Dompet / Rekening
-          </span>
-          {savings.length > 0 && (
-            <span style={{ fontSize: '0.75rem', padding: '0.25rem 0.6rem', borderRadius: '12px', background: 'rgba(99, 102, 241, 0.12)', color: 'var(--accent-color)', fontWeight: 600 }}>
-              {savings.length} Target Tabungan
-            </span>
+        {/* Filter Pills */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', overflowX: 'auto', maxWidth: '100%', paddingBottom: '0.2rem' }}>
+          <button
+            className={`portfolio-filter-btn ${activeFilter === 'all' ? 'active' : ''}`}
+            onClick={() => setActiveFilter('all')}
+          >
+            Semua ({allAssets.length})
+          </button>
+          <button
+            className={`portfolio-filter-btn ${activeFilter === 'digital' ? 'active' : ''}`}
+            onClick={() => setActiveFilter('digital')}
+          >
+            Bank & Digital ({wallets.filter(w => w.type !== 'cash').length})
+          </button>
+          <button
+            className={`portfolio-filter-btn ${activeFilter === 'cash' ? 'active' : ''}`}
+            onClick={() => setActiveFilter('cash')}
+          >
+            Tunai ({wallets.filter(w => w.type === 'cash').length})
+          </button>
+          {totalSavings > 0 && (
+            <button
+              className={`portfolio-filter-btn ${activeFilter === 'savings' ? 'active' : ''}`}
+              onClick={() => setActiveFilter('savings')}
+            >
+              Tabungan ({savings.length})
+            </button>
           )}
         </div>
       </div>
 
-      {/* Visual Multi-Segment Bar */}
-      {grandNetWorth > 0 && (
-        <div style={{ marginBottom: '1.25rem' }}>
-          <div style={{ display: 'flex', height: '10px', borderRadius: '6px', overflow: 'hidden', background: 'rgba(255, 255, 255, 0.05)', gap: '2px' }}>
-            {wallets.map((w, index) => {
-              const share = grandNetWorth > 0 ? Math.max(0, (w.balance / grandNetWorth) * 100) : 0;
-              if (share <= 0) return null;
-              const color = colorPalette[index % colorPalette.length];
-              return (
-                <div
-                  key={w.id || index}
-                  title={`${w.name}: ${share.toFixed(1)}%`}
-                  style={{
-                    width: `${share}%`,
-                    background: color,
-                    transition: 'width 0.4s ease'
-                  }}
-                />
-              );
-            })}
-            {totalSavings > 0 && (
+      {/* Interactive Main Body: 2 Columns (Donut Chart Left, Asset Cards Right) */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.5rem', alignItems: 'center' }}>
+        
+        {/* Column 1: Interactive SVG Donut & Liquidity Breakdown */}
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: 'rgba(255, 255, 255, 0.015)', border: '1px solid var(--border-color)', borderRadius: '16px', padding: '1.25rem' }}>
+          
+          <div className="portfolio-donut-container" style={{ width: '200px', height: '200px' }}>
+            <svg width="200" height="200" viewBox="0 0 200 200" style={{ transform: 'rotate(-90deg)' }}>
+              {/* Background Track Circle */}
+              <circle
+                cx="100"
+                cy="100"
+                r={donutRadius}
+                fill="transparent"
+                stroke="rgba(255, 255, 255, 0.05)"
+                strokeWidth="14"
+              />
+
+              {/* Animated Asset Donut Segments */}
+              {donutSlices.map((slice) => {
+                const isSelected = (selectedAssetId === slice.id) || (hoveredAssetId === slice.id);
+                return (
+                  <circle
+                    key={slice.id}
+                    className={`portfolio-donut-segment ${isSelected ? 'active' : ''}`}
+                    cx="100"
+                    cy="100"
+                    r={donutRadius}
+                    fill="transparent"
+                    stroke={slice.color}
+                    strokeWidth={isSelected ? 18 : 14}
+                    strokeDasharray={slice.strokeDasharray}
+                    strokeDashoffset={slice.strokeDashoffset}
+                    strokeLinecap="round"
+                    opacity={activeAsset && !isSelected ? 0.35 : 1}
+                    onMouseEnter={() => setHoveredAssetId(slice.id)}
+                    onMouseLeave={() => setHoveredAssetId(null)}
+                    onClick={() => setSelectedAssetId(selectedAssetId === slice.id ? null : slice.id)}
+                  />
+                );
+              })}
+            </svg>
+
+            {/* Dynamic Center Details */}
+            <div className="portfolio-donut-center">
+              {activeAsset ? (
+                <div>
+                  <span style={{ fontSize: '0.65rem', color: activeAsset.color, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block' }}>
+                    {activeAsset.share.toFixed(1)}% PORSI
+                  </span>
+                  <strong style={{ fontSize: '0.85rem', color: 'var(--text-primary)', display: 'block', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', margin: '0.1rem 0' }}>
+                    {activeAsset.name}
+                  </strong>
+                  <span style={{ fontSize: '0.75rem', fontWeight: 800, color: activeAsset.color, display: 'block' }}>
+                    {formatIDR(activeAsset.balance)}
+                  </span>
+                </div>
+              ) : (
+                <div>
+                  <span style={{ fontSize: '0.65rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block' }}>
+                    NET WORTH
+                  </span>
+                  <strong style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--text-primary)', display: 'block', margin: '0.15rem 0' }}>
+                    {formatIDR(grandNetWorth)}
+                  </strong>
+                  <span style={{ fontSize: '0.65rem', color: '#10b981', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '0.2rem' }}>
+                    <Sparkles size={10} /> {allAssets.length} Akun Aset
+                  </span>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Liquidity Ratio Summary */}
+          <div style={{ width: '100%', marginTop: '1.25rem', paddingTop: '1rem', borderTop: '1px solid var(--border-color)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.4rem', fontSize: '0.75rem' }}>
+              <span style={{ color: '#10b981', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                <Wallet size={12} /> Aset Likuid ({liquidRatio.toFixed(0)}%)
+              </span>
+              <span style={{ color: '#818cf8', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                <PiggyBank size={12} /> Ditabung ({savedRatio.toFixed(0)}%)
+              </span>
+            </div>
+
+            {/* Dual animated ratio bar */}
+            <div style={{ display: 'flex', height: '6px', borderRadius: '3px', overflow: 'hidden', background: 'rgba(255, 255, 255, 0.05)', gap: '2px' }}>
               <div
-                title={`Target Tabungan: ${((totalSavings / grandNetWorth) * 100).toFixed(1)}%`}
                 style={{
-                  width: `${(totalSavings / grandNetWorth) * 100}%`,
-                  background: '#6366f1',
-                  transition: 'width 0.4s ease'
+                  width: `${liquidRatio}%`,
+                  background: 'linear-gradient(90deg, #10b981, #06b6d4)',
+                  transition: 'width 0.5s ease'
                 }}
               />
-            )}
+              <div
+                style={{
+                  width: `${savedRatio}%`,
+                  background: '#6366f1',
+                  transition: 'width 0.5s ease'
+                }}
+              />
+            </div>
           </div>
         </div>
-      )}
 
-      {/* Asset Grid Breakdown */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '0.85rem' }}>
-        {wallets.map((w, index) => {
-          const share = grandNetWorth > 0 ? Math.max(0, (w.balance / grandNetWorth) * 100) : 0;
-          const color = colorPalette[index % colorPalette.length];
-          const isSeaBank = (w.name || '').toLowerCase().includes('seabank');
+        {/* Column 2: Interactive Asset Cards Grid */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '0.75rem', maxHeight: '340px', overflowY: 'auto', paddingRight: '0.25rem' }}>
+          {filteredAssets.map((asset) => {
+            const isSelected = (selectedAssetId === asset.id) || (hoveredAssetId === asset.id);
 
-          return (
-            <div
-              key={w.id || index}
-              style={{
-                background: 'rgba(255, 255, 255, 0.02)',
-                border: '1px solid var(--border-color)',
-                borderRadius: '10px',
-                padding: '0.85rem 1rem',
-                display: 'flex',
-                flexDirection: 'column',
-                justifyContent: 'space-between',
-                gap: '0.5rem',
-                position: 'relative',
-                overflow: 'hidden'
-              }}
-            >
-              {/* Top Accent Line */}
-              <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '3px', background: color }} />
+            return (
+              <div
+                key={asset.id}
+                className={`portfolio-asset-card ${isSelected ? 'selected' : ''}`}
+                onMouseEnter={() => setHoveredAssetId(asset.id)}
+                onMouseLeave={() => setHoveredAssetId(null)}
+                onClick={() => setSelectedAssetId(selectedAssetId === asset.id ? null : asset.id)}
+              >
+                {/* Top Colored Accent Stripe */}
+                <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '3px', background: asset.color }} />
 
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '0.5rem' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', minWidth: 0 }}>
-                  <div
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '0.4rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', minWidth: 0 }}>
+                    <div
+                      style={{
+                        width: '30px',
+                        height: '30px',
+                        borderRadius: '8px',
+                        background: `${asset.color}20`,
+                        color: asset.color,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        flexShrink: 0,
+                        transition: 'transform 0.2s ease'
+                      }}
+                    >
+                      {getWalletIcon(asset)}
+                    </div>
+                    <div style={{ minWidth: 0 }}>
+                      <strong style={{ fontSize: '0.825rem', color: 'var(--text-primary)', display: 'block', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {asset.name}
+                      </strong>
+                      <span style={{ fontSize: '0.675rem', color: 'var(--text-secondary)' }}>
+                        {asset.typeLabel}
+                      </span>
+                    </div>
+                  </div>
+
+                  <span
                     style={{
-                      width: '32px',
-                      height: '32px',
-                      borderRadius: '8px',
-                      background: `${color}20`,
-                      color: color,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
+                      fontSize: '0.7rem',
+                      fontWeight: 700,
+                      color: asset.color,
+                      background: `${asset.color}15`,
+                      padding: '0.15rem 0.4rem',
+                      borderRadius: '6px',
                       flexShrink: 0
                     }}
                   >
-                    {getWalletIcon(w)}
-                  </div>
-                  <div style={{ minWidth: 0 }}>
-                    <strong style={{ fontSize: '0.875rem', color: 'var(--text-primary)', display: 'block', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                      {w.name}
-                    </strong>
-                    <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>
-                      {w.type === 'cash' ? t('cashAssets') || 'Tunai' : t('digitalAssets') || 'Digital/Bank'}
-                    </span>
-                  </div>
-                </div>
-
-                <span style={{ fontSize: '0.75rem', fontWeight: 700, color: color, background: `${color}15`, padding: '0.15rem 0.4rem', borderRadius: '6px' }}>
-                  {share.toFixed(1)}%
-                </span>
-              </div>
-
-              <div>
-                <span style={{ fontSize: '1.05rem', fontWeight: 800, color: 'var(--text-primary)', display: 'block', letterSpacing: '-0.01em' }}>
-                  {formatIDR(w.balance)}
-                </span>
-                {isSeaBank && (
-                  <span style={{ fontSize: '0.65rem', color: '#10b981', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '0.2rem', marginTop: '0.15rem' }}>
-                    <ShieldCheck size={11} /> {w.balance >= 150000000 ? 'Bunga 3,5% p.a.' : 'Bunga 2,5% p.a.'}
+                    {asset.share.toFixed(1)}%
                   </span>
-                )}
-              </div>
-
-              {/* Mini progress bar */}
-              <div style={{ width: '100%', height: '4px', background: 'rgba(255, 255, 255, 0.06)', borderRadius: '2px', overflow: 'hidden' }}>
-                <div style={{ width: `${Math.min(share, 100)}%`, height: '100%', background: color, borderRadius: '2px' }} />
-              </div>
-            </div>
-          );
-        })}
-
-        {/* Savings Goals Block if exist */}
-        {savings.length > 0 && (
-          <div
-            style={{
-              background: 'rgba(99, 102, 241, 0.04)',
-              border: '1px solid rgba(99, 102, 241, 0.2)',
-              borderRadius: '10px',
-              padding: '0.85rem 1rem',
-              display: 'flex',
-              flexDirection: 'column',
-              justifyContent: 'space-between',
-              gap: '0.5rem',
-              position: 'relative',
-              overflow: 'hidden'
-            }}
-          >
-            <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '3px', background: '#6366f1' }} />
-            
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '0.5rem' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <div
-                  style={{
-                    width: '32px',
-                    height: '32px',
-                    borderRadius: '8px',
-                    background: 'rgba(99, 102, 241, 0.2)',
-                    color: '#818cf8',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    flexShrink: 0
-                  }}
-                >
-                  <PiggyBank size={18} />
                 </div>
+
                 <div>
-                  <strong style={{ fontSize: '0.875rem', color: 'var(--text-primary)', display: 'block' }}>
-                    {t('savingGoalsAssets') || 'Target Tabungan'}
-                  </strong>
-                  <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>
-                    {savings.length} Target Aktif
+                  <span style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--text-primary)', display: 'block', letterSpacing: '-0.01em' }}>
+                    {formatIDR(asset.balance)}
                   </span>
+                  {asset.isSeaBank && (
+                    <span style={{ fontSize: '0.65rem', color: '#10b981', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '0.2rem', marginTop: '0.15rem' }}>
+                      <ShieldCheck size={11} /> {asset.balance >= 150000000 ? 'Bunga 3,5% p.a.' : 'Bunga 2,5% p.a.'}
+                    </span>
+                  )}
+                </div>
+
+                {/* Animated Mini Progress Bar */}
+                <div style={{ width: '100%', height: '4px', background: 'rgba(255, 255, 255, 0.06)', borderRadius: '2px', overflow: 'hidden' }}>
+                  <div
+                    className="portfolio-progress-bar-fill"
+                    style={{
+                      width: `${Math.min(asset.share, 100)}%`,
+                      background: asset.color
+                    }}
+                  />
                 </div>
               </div>
+            );
+          })}
+        </div>
 
-              <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#818cf8', background: 'rgba(99, 102, 241, 0.15)', padding: '0.15rem 0.4rem', borderRadius: '6px' }}>
-                {grandNetWorth > 0 ? ((totalSavings / grandNetWorth) * 100).toFixed(1) : 0}%
-              </span>
-            </div>
-
-            <div>
-              <span style={{ fontSize: '1.05rem', fontWeight: 800, color: 'var(--text-primary)', display: 'block' }}>
-                {formatIDR(totalSavings)}
-              </span>
-            </div>
-
-            <div style={{ width: '100%', height: '4px', background: 'rgba(255, 255, 255, 0.06)', borderRadius: '2px', overflow: 'hidden' }}>
-              <div style={{ width: `${grandNetWorth > 0 ? Math.min((totalSavings / grandNetWorth) * 100, 100) : 0}%`, height: '100%', background: '#6366f1', borderRadius: '2px' }} />
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );
