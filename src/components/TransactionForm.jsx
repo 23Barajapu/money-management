@@ -499,6 +499,7 @@ export default function TransactionForm({
         </div>
       </form>
     </div>
+    )}
   </div>
   );
 }
