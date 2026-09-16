@@ -1078,7 +1078,7 @@ export default function App() {
 
         {/* Tab 3: Savings & Budgets */}
         {activeTab === 'savings' && (
-          <div style={{ maxWidth: '800px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+          <div className="widescreen-grid-2col">
             <BudgetAndSavings 
               transactions={transactions} 
               formatIDR={formatIDR} 
@@ -1104,7 +1104,7 @@ export default function App() {
 
         {/* Tab 4: Tagihan & Cicilan */}
         {activeTab === 'reminders' && (
-          <div style={{ maxWidth: '800px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+          <div className="widescreen-grid-2col">
             <Reminders 
               onAddTransaction={handleAddTransaction} 
               formatIDR={formatIDR} 
@@ -1132,7 +1132,7 @@ export default function App() {
 
         {/* Tab 6: Analisis & Ekspor */}
         {activeTab === 'analytics' && (
-          <div style={{ maxWidth: '900px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+          <div className="widescreen-grid-2col">
             <AdvancedAnalytics 
               transactions={transactions} 
               balance={balance} 
