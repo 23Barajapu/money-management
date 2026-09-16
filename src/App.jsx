@@ -42,6 +42,7 @@ export default function App() {
   const [transactions, setTransactions] = useState([]);
   const [installments, setInstallments] = useState([]);
   const [wallets, setWallets] = useState([]);
+  const [savingsGoals, setSavingsGoals] = useState([]);
   const [activeTab, setActiveTab] = useState('dashboard'); // 'dashboard', 'transactions', 'savings', 'installments', 'reminders', 'analytics'
   const [rates, setRates] = useState({ USD: 0.000062, EUR: 0.000057, SGD: 0.000083 });
   const [currency, setCurrency] = useState('IDR');
@@ -170,6 +171,13 @@ export default function App() {
         await supabase.from('wallets').upsert(defaultWallets);
         setWallets(defaultWallets);
       }
+
+      // 5b. Fetch savings goals for portfolio net worth calculation
+      const { data: sgData } = await supabase
+        .from('savings_goals')
+        .select('*')
+        .eq('user_id', userId);
+      setSavingsGoals(sgData || []);
 
       // 6. Fetch profile & user_metadata for cross-device cloud sync
       const authUser = (await supabase.auth.getUser()).data.user;
@@ -921,7 +929,7 @@ export default function App() {
             {/* Portfolio Asset & Wallet Distribution */}
             <PortfolioDistribution
               wallets={walletsWithUpdatedBalances}
-              savings={savings}
+              savings={savingsGoals}
               totalBalance={balance}
               cashBalance={cashBalance}
               cashlessBalance={cashlessBalance}
