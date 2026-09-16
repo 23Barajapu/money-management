@@ -1,0 +1,213 @@
+{
+  "communities": {
+    "0": [
+      "src_components_installmenttracker",
+      "src_components_profilemodal",
+      "src_components_profilemodal_profilemodal",
+      "src_components_reminders",
+      "src_components_reminders_reminders",
+      "src_components_seabankinterestcalculator",
+      "src_components_seabankinterestcalculator_seabankinterestcalculator",
+      "src_hooks_usecurrencyinput",
+      "src_hooks_usecurrencyinput_formatbycurrency",
+      "src_hooks_usecurrencyinput_parseformatted",
+      "src_hooks_usecurrencyinput_usecurrencyinput"
+    ],
+    "1": [
+      "src_components_quicktextinput",
+      "src_components_quicktextinput_quicktextinput",
+      "src_components_transactionform",
+      "src_components_transactionform_transactionform",
+      "src_utils_nlptransactionparser",
+      "src_utils_nlptransactionparser_category_keywords",
+      "src_utils_nlptransactionparser_extractamount",
+      "src_utils_nlptransactionparser_extractdate",
+      "src_utils_nlptransactionparser_matchwallets",
+      "src_utils_nlptransactionparser_parsetransactiontext"
+    ],
+    "2": [
+      "src_app",
+      "src_components_advancedanalytics",
+      "src_components_advancedanalytics_advancedanalytics",
+      "src_components_confirmmodal",
+      "src_components_confirmmodal_confirmmodal",
+      "src_components_installmenttracker_installmenttracker",
+      "src_components_transactionlist",
+      "src_components_transactionlist_transactionlist"
+    ],
+    "3": [
+      "src_components_auth",
+      "src_components_auth_auth",
+      "src_components_exportdata",
+      "src_components_exportdata_exportdata",
+      "src_components_walletmanager",
+      "src_components_walletmanager_walletmanager",
+      "src_supabaseclient",
+      "src_supabaseclient_supabase"
+    ],
+    "4": [
+      "src_app_app",
+      "src_main",
+      "src_utils_i18n",
+      "src_utils_i18n_getdevicelanguage",
+      "src_utils_i18n_gettranslation",
+      "src_utils_i18n_translations"
+    ],
+    "5": [
+      "src_components_budgetandsavings",
+      "src_components_budgetandsavings_budgetandsavings",
+      "src_components_financeallocation",
+      "src_components_financeallocation_financeallocation",
+      "src_hooks_usepaydaycycle",
+      "src_hooks_usepaydaycycle_usepaydaycycle"
+    ],
+    "6": [
+      "src_main_errorboundary",
+      "src_main_errorboundary_componentdidcatch",
+      "src_main_errorboundary_constructor",
+      "src_main_errorboundary_getderivedstatefromerror",
+      "src_main_errorboundary_render"
+    ],
+    "7": [
+      "src_components_budgetoverview",
+      "src_components_budgetoverview_budgetoverview"
+    ],
+    "8": [
+      "src_components_dashboardcharts",
+      "src_components_dashboardcharts_dashboardcharts"
+    ],
+    "9": [
+      "src_components_toast",
+      "src_components_toast_toast"
+    ],
+    "10": [
+      "vite_config"
+    ]
+  },
+  "cohesion": {
+    "0": 0.34545454545454546,
+    "1": 0.3333333333333333,
+    "2": 0.35714285714285715,
+    "3": 0.35714285714285715,
+    "4": 0.4666666666666667,
+    "5": 0.5333333333333333,
+    "6": 0.4,
+    "7": 1.0,
+    "8": 1.0,
+    "9": 1.0,
+    "10": 1.0
+  },
+  "gods": [
+    {
+      "id": "src_hooks_usecurrencyinput_usecurrencyinput",
+      "label": "useCurrencyInput()",
+      "degree": 16
+    },
+    {
+      "id": "src_supabaseclient_supabase",
+      "label": "supabase",
+      "degree": 8
+    },
+    {
+      "id": "src_utils_nlptransactionparser_parsetransactiontext",
+      "label": "parseTransactionText()",
+      "degree": 6
+    },
+    {
+      "id": "src_hooks_usepaydaycycle_usepaydaycycle",
+      "label": "usePaydayCycle()",
+      "degree": 5
+    },
+    {
+      "id": "src_main_errorboundary",
+      "label": "ErrorBoundary",
+      "degree": 5
+    },
+    {
+      "id": "src_app_app",
+      "label": "App()",
+      "degree": 4
+    },
+    {
+      "id": "src_components_quicktextinput_quicktextinput",
+      "label": "QuickTextInput()",
+      "degree": 4
+    },
+    {
+      "id": "src_components_transactionform_transactionform",
+      "label": "TransactionForm()",
+      "degree": 4
+    },
+    {
+      "id": "src_utils_i18n_getdevicelanguage",
+      "label": "getDeviceLanguage()",
+      "degree": 4
+    },
+    {
+      "id": "src_utils_i18n_gettranslation",
+      "label": "getTranslation()",
+      "degree": 4
+    }
+  ],
+  "surprises": [
+    {
+      "source": "BudgetAndSavings()",
+      "target": "useCurrencyInput()",
+      "source_files": [
+        "src/components/BudgetAndSavings.jsx",
+        "src/hooks/useCurrencyInput.js"
+      ],
+      "confidence": "EXTRACTED",
+      "relation": "calls",
+      "why": "bridges separate communities"
+    },
+    {
+      "source": "TransactionForm()",
+      "target": "useCurrencyInput()",
+      "source_files": [
+        "src/components/TransactionForm.jsx",
+        "src/hooks/useCurrencyInput.js"
+      ],
+      "confidence": "EXTRACTED",
+      "relation": "calls",
+      "why": "bridges separate communities"
+    },
+    {
+      "source": "TransactionForm()",
+      "target": "usePaydayCycle()",
+      "source_files": [
+        "src/components/TransactionForm.jsx",
+        "src/hooks/usePaydayCycle.js"
+      ],
+      "confidence": "EXTRACTED",
+      "relation": "calls",
+      "why": "bridges separate communities"
+    },
+    {
+      "source": "WalletManager()",
+      "target": "useCurrencyInput()",
+      "source_files": [
+        "src/components/WalletManager.jsx",
+        "src/hooks/useCurrencyInput.js"
+      ],
+      "confidence": "EXTRACTED",
+      "relation": "calls",
+      "why": "bridges separate communities"
+    },
+    {
+      "source": "App()",
+      "target": "getDeviceLanguage()",
+      "source_files": [
+        "src/App.jsx",
+        "src/utils/i18n.js"
+      ],
+      "confidence": "EXTRACTED",
+      "relation": "calls",
+      "why": "cross-file semantic connection"
+    }
+  ],
+  "tokens": {
+    "input": 0,
+    "output": 0
+  }
+}

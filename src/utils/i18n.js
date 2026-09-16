@@ -8,14 +8,21 @@ export const getDeviceLanguage = () => {
 export const translations = {
   id: {
     // Navigation
-    dashboard: 'Dashboard',
+    dashboard: 'Detail Portofolio',
     transactions: 'Transaksi',
     budgets: 'Budgets',
     analytics: 'Analisis',
     reminders: 'Tagihan & Cicilan',
 
-    // Dashboard Cards
-    totalBalance: 'Total Saldo',
+    // Portfolio & Dashboard Cards
+    portfolioDetail: 'Detail Portofolio',
+    portfolioOverview: 'Ringkasan Portofolio Aset',
+    portfolioAllocation: 'Distribusi & Alokasi Portofolio',
+    netWorth: 'Total Nilai Portofolio (Net Worth)',
+    digitalAssets: 'Digital / Bank',
+    cashAssets: 'Tunai (Cash)',
+    savingGoalsAssets: 'Target Tabungan',
+    totalBalance: 'Total Portofolio',
     vsLastMonth: 'vs bulan lalu',
     currentMonth: 'Bulan Ini',
     income: 'Pemasukan',
@@ -88,14 +95,21 @@ export const translations = {
   },
   en: {
     // Navigation
-    dashboard: 'Dashboard',
-    transactions: 'Transaksi',
+    dashboard: 'Portfolio Detail',
+    transactions: 'Transactions',
     budgets: 'Budgets',
     analytics: 'Analytics',
     reminders: 'Bills & Installments',
 
-    // Dashboard Cards
-    totalBalance: 'Total Balance',
+    // Portfolio & Dashboard Cards
+    portfolioDetail: 'Portfolio Detail',
+    portfolioOverview: 'Asset Portfolio Overview',
+    portfolioAllocation: 'Portfolio & Asset Distribution',
+    netWorth: 'Total Portfolio Net Worth',
+    digitalAssets: 'Digital / Bank',
+    cashAssets: 'Cash (Physical)',
+    savingGoalsAssets: 'Savings Goals',
+    totalBalance: 'Total Portfolio',
     vsLastMonth: 'vs last month',
     currentMonth: 'Current Month',
     income: 'Income',

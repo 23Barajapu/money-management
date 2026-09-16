@@ -31,6 +31,7 @@ import Toast from './components/Toast';
 import ConfirmModal from './components/ConfirmModal';
 import Auth from './components/Auth';
 import QuickTextInput from './components/QuickTextInput';
+import PortfolioDistribution from './components/PortfolioDistribution';
 import { getTranslation, getDeviceLanguage } from './utils/i18n';
 import SeaBankInterestCalculator from './components/SeaBankInterestCalculator';
 
@@ -845,45 +846,49 @@ export default function App() {
 
       {/* Main Content Area */}
       <main className="main-content">
-        {/* Tab 1: Dashboard (3-Row Layout Matching Mockup) */}
+        {/* Tab 1: Portfolio Detail */}
         {activeTab === 'dashboard' && (
           <div className="dashboard-v2-container">
             {/* ROW 1: 3 Summary Cards */}
             <div className="dashboard-row-1">
-              {/* Card 1: Total Balance */}
+              {/* Card 1: Total Portfolio / Net Worth */}
               <div className="card" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-                <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', fontWeight: 500 }}>{t('totalBalance')}</span>
-                <div style={{ margin: '0.5rem 0' }}>
-                  <h2 style={{ fontSize: '2rem', fontWeight: 800, color: '#fff', margin: 0, letterSpacing: '-0.02em' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', fontWeight: 500 }}>{t('totalBalance')} (Net Worth)</span>
+                  <span style={{ fontSize: '0.7rem', padding: '0.15rem 0.4rem', borderRadius: '4px', background: 'rgba(16,185,129,0.12)', color: '#10b981', fontWeight: 600 }}>
+                    {walletsWithUpdatedBalances.length} Dompet
+                  </span>
+                </div>
+                <div style={{ margin: '0.4rem 0' }}>
+                  <h2 style={{ fontSize: '1.85rem', fontWeight: 800, color: 'var(--text-primary)', margin: 0, letterSpacing: '-0.02em' }}>
                     {formatIDR(balance)}
                   </h2>
                 </div>
-                <div>
-                  <span className="badge-green-trend">
-                    <TrendingUp size={12} /> +2.4% {t('vsLastMonth')}
-                  </span>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.75rem', color: 'var(--text-secondary)', borderTop: '1px solid var(--border-color)', paddingTop: '0.4rem' }}>
+                  <span>Digital: <strong style={{ color: 'var(--text-primary)' }}>{formatIDR(cashlessBalance)}</strong></span>
+                  <span>Tunai: <strong style={{ color: 'var(--text-primary)' }}>{formatIDR(cashBalance)}</strong></span>
                 </div>
               </div>
 
               {/* Card 2: Current Month Summary */}
               <div className="card" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
                 <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', fontWeight: 500 }}>{t('currentMonth')}</span>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(100px, 1fr))', gap: '0.75rem', marginTop: '0.5rem' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(90px, 1fr))', gap: '0.5rem', marginTop: '0.35rem' }}>
                   <div>
-                    <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '0.15rem', fontWeight: 500 }}>{t('income')}</span>
-                    <strong style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--income-color)', display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '0.15rem', fontWeight: 500 }}>{t('income')}</span>
+                    <strong style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--income-color)', display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {formatIDR(paydayIncome)}
                     </strong>
                   </div>
                   <div>
-                    <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '0.15rem', fontWeight: 500 }}>{t('expenses')}</span>
-                    <strong style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--expense-color)', display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '0.15rem', fontWeight: 500 }}>{t('expenses')}</span>
+                    <strong style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--expense-color)', display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {formatIDR(paydayExpense)}
                     </strong>
                   </div>
                   <div>
-                    <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '0.15rem', fontWeight: 500 }}>{t('saved')}</span>
-                    <strong style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--saving-color)', display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '0.15rem', fontWeight: 500 }}>{t('saved')}</span>
+                    <strong style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--saving-color)', display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {formatIDR(currentSaved)}
                     </strong>
                   </div>
@@ -897,21 +902,33 @@ export default function App() {
                   <MoreHorizontal size={16} color="var(--text-secondary)" />
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.4rem', marginTop: '0.5rem' }}>
-                  <button onClick={() => { setSelectedFormType('income'); setActiveTab('transactions'); }} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.25rem', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border-color)', padding: '0.6rem 0.25rem', borderRadius: '8px', color: '#fff', fontSize: '0.7rem', cursor: 'pointer' }}>
+                  <button onClick={() => { setSelectedFormType('income'); setActiveTab('transactions'); }} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.25rem', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border-color)', padding: '0.6rem 0.25rem', borderRadius: '8px', color: 'var(--text-primary)', fontSize: '0.7rem', cursor: 'pointer' }}>
                     <Plus size={16} color="#10b981" />
                     <span>Pemasukan</span>
                   </button>
-                  <button onClick={() => { setSelectedFormType('expense'); setActiveTab('transactions'); }} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.25rem', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border-color)', padding: '0.6rem 0.25rem', borderRadius: '8px', color: '#fff', fontSize: '0.7rem', cursor: 'pointer' }}>
+                  <button onClick={() => { setSelectedFormType('expense'); setActiveTab('transactions'); }} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.25rem', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border-color)', padding: '0.6rem 0.25rem', borderRadius: '8px', color: 'var(--text-primary)', fontSize: '0.7rem', cursor: 'pointer' }}>
                     <ArrowDownCircle size={16} color="#ef4444" />
                     <span>Pengeluaran</span>
                   </button>
-                  <button onClick={() => { setSelectedFormType('transfer'); setActiveTab('transactions'); }} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.25rem', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border-color)', padding: '0.6rem 0.25rem', borderRadius: '8px', color: '#fff', fontSize: '0.7rem', cursor: 'pointer' }}>
+                  <button onClick={() => { setSelectedFormType('transfer'); setActiveTab('transactions'); }} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.25rem', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border-color)', padding: '0.6rem 0.25rem', borderRadius: '8px', color: 'var(--text-primary)', fontSize: '0.7rem', cursor: 'pointer' }}>
                     <Send size={16} color="#06b6d4" />
                     <span>Transfer</span>
                   </button>
                 </div>
               </div>
             </div>
+
+            {/* Portfolio Asset & Wallet Distribution */}
+            <PortfolioDistribution
+              wallets={walletsWithUpdatedBalances}
+              savings={savings}
+              totalBalance={balance}
+              cashBalance={cashBalance}
+              cashlessBalance={cashlessBalance}
+              formatIDR={formatIDR}
+              currency={currency}
+              t={t}
+            />
 
             {/* Quick Text Transaction Input */}
             <QuickTextInput
