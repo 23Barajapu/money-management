@@ -1,12 +1,14 @@
 import React, { useState, useMemo } from 'react';
 import { parseTransactionText } from '../utils/nlpTransactionParser';
-import { Sparkles, ArrowRight, ArrowRightLeft, TrendingUp, TrendingDown, Wallet, Calendar, Tag, Check, AlertCircle } from 'lucide-react';
+import { Sparkles, ArrowRight, ArrowRightLeft, TrendingUp, TrendingDown, Wallet, Calendar, Tag, Check, SlidersHorizontal } from 'lucide-react';
 
 export default function QuickTextInput({
   onAddTransaction,
   onOpenDetailedForm,
+  onToggleMode,
   wallets = [],
   currency = 'IDR',
+  compact = false,
   t = (k) => k
 }) {
   const [inputText, setInputText] = useState('');
@@ -58,52 +60,92 @@ export default function QuickTextInput({
   };
 
   return (
-    <div className="card" style={{
-      borderRadius: '16px',
-      padding: '1.25rem',
-      marginBottom: '1.5rem',
-      boxShadow: '0 4px 20px -2px rgba(0, 0, 0, 0.05)'
-    }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+    <div
+      className={compact ? '' : 'card'}
+      style={compact ? {
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'space-between',
+        height: '100%'
+      } : {
+        borderRadius: '16px',
+        padding: '1.25rem',
+        marginBottom: '1.5rem',
+        boxShadow: '0 4px 20px -2px rgba(0, 0, 0, 0.05)'
+      }}
+    >
+      {/* Header */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: compact ? '0.5rem' : '0.75rem', gap: '0.5rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
           <div style={{
             background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
-            padding: '6px',
+            padding: compact ? '4px' : '6px',
             borderRadius: '8px',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            color: '#fff'
+            color: '#fff',
+            flexShrink: 0
           }}>
-            <Sparkles size={16} />
+            <Sparkles size={compact ? 14 : 16} />
           </div>
           <div>
-            <h4 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 600, color: 'var(--text-primary)' }}>
-              Input Cepat Transaksi
+            <h4 style={{ margin: 0, fontSize: compact ? '0.85rem' : '0.95rem', fontWeight: 600, color: 'var(--text-primary)' }}>
+              {compact ? 'Aksi Cepat: Input Teks' : 'Input Cepat Transaksi (Mode Otomatis)'}
             </h4>
-            <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-              Deteksi otomatis nominal, kategori, dan dompet dari kalimat
-            </span>
+            {!compact && (
+              <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                Deteksi otomatis nominal, kategori, dan dompet dari kalimat
+              </span>
+            )}
           </div>
         </div>
+
+        {/* Interactive Mode Switcher if inside TransactionForm */}
+        {onToggleMode && (
+          <button
+            type="button"
+            onClick={onToggleMode}
+            style={{
+              background: 'rgba(255, 255, 255, 0.04)',
+              border: '1px solid var(--border-color)',
+              color: 'var(--text-secondary)',
+              padding: '0.35rem 0.65rem',
+              borderRadius: '20px',
+              fontSize: '0.75rem',
+              fontWeight: 600,
+              cursor: 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.35rem',
+              transition: 'all 0.2s ease',
+              whiteSpace: 'nowrap'
+            }}
+            onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--text-primary)'; e.currentTarget.style.borderColor = 'var(--accent-color)'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-secondary)'; e.currentTarget.style.borderColor = 'var(--border-color)'; }}
+          >
+            <SlidersHorizontal size={13} color="var(--accent-color)" />
+            <span>Ganti ke Mode Manual</span>
+          </button>
+        )}
       </div>
 
       <form onSubmit={handleQuickSubmit} style={{ position: 'relative' }}>
-        <div style={{ display: 'flex', gap: '0.5rem', position: 'relative', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', gap: '0.4rem', position: 'relative' }}>
           <input
             type="text"
             value={inputText}
             onChange={(e) => setInputText(e.target.value)}
-            placeholder="Ketik catatan transaksi..."
+            placeholder={compact ? "e.g. 'kopi 25rb gopay' / 'gaji 5jt'..." : "Ketik catatan transaksi (misal: 'makan siang 35rb bca', 'gaji 7jt')..."}
             style={{
-              flex: '1 1 200px',
-              minHeight: '44px',
-              padding: '0.75rem 1rem',
-              borderRadius: '10px',
+              flex: 1,
+              minHeight: compact ? '38px' : '44px',
+              padding: compact ? '0.45rem 0.75rem' : '0.75rem 1rem',
+              borderRadius: '8px',
               border: parsed.isValid ? '1px solid var(--accent-color)' : '1px solid var(--border-color)',
               background: 'var(--bg-primary)',
               color: 'var(--text-primary)',
-              fontSize: '0.9rem',
+              fontSize: compact ? '0.8rem' : '0.9rem',
               outline: 'none',
               transition: 'all 0.2s ease',
               boxShadow: parsed.isValid ? '0 0 0 2px rgba(99, 102, 241, 0.2)' : 'none'
@@ -114,22 +156,21 @@ export default function QuickTextInput({
             type="submit"
             disabled={!parsed.isValid}
             style={{
-              minHeight: '44px',
-              minWidth: '88px',
-              padding: '0.75rem 1.25rem',
-              borderRadius: '10px',
+              minHeight: compact ? '38px' : '44px',
+              padding: compact ? '0.45rem 0.85rem' : '0.75rem 1.25rem',
+              borderRadius: '8px',
               border: 'none',
               background: parsed.isValid
                 ? 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)'
                 : 'rgba(148, 163, 184, 0.15)',
               color: parsed.isValid ? '#fff' : 'var(--text-secondary)',
               fontWeight: 600,
-              fontSize: '0.85rem',
+              fontSize: compact ? '0.75rem' : '0.85rem',
               cursor: parsed.isValid ? 'pointer' : 'not-allowed',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              gap: '0.4rem',
+              gap: '0.35rem',
               transition: 'all 0.2s ease',
               whiteSpace: 'nowrap',
               flex: '0 0 auto'
@@ -137,13 +178,13 @@ export default function QuickTextInput({
           >
             {isSuccess ? (
               <>
-                <Check size={16} color="#10b981" />
-                <span>Tersimpan!</span>
+                <Check size={14} color="#10b981" />
+                <span>Tercatat!</span>
               </>
             ) : (
               <>
                 <span>Catat</span>
-                <ArrowRight size={14} />
+                <ArrowRight size={13} />
               </>
             )}
           </button>
@@ -152,8 +193,8 @@ export default function QuickTextInput({
         {/* Live Detected Badges */}
         {inputText.trim().length > 0 && (
           <div style={{
-            marginTop: '0.75rem',
-            padding: '0.75rem',
+            marginTop: '0.5rem',
+            padding: compact ? '0.5rem' : '0.75rem',
             background: 'var(--bg-secondary)',
             borderRadius: '8px',
             border: '1px solid var(--border-color)',
@@ -161,20 +202,20 @@ export default function QuickTextInput({
             flexWrap: 'wrap',
             alignItems: 'center',
             justifyContent: 'space-between',
-            gap: '0.5rem',
+            gap: '0.4rem',
             width: '100%',
             boxSizing: 'border-box'
           }}>
-            <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '0.4rem' }}>
+            <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '0.35rem' }}>
               {/* Tipe Badge */}
               <span style={{
-                fontSize: '0.75rem',
+                fontSize: '0.7rem',
                 fontWeight: 600,
-                padding: '4px 8px',
-                borderRadius: '6px',
+                padding: '3px 6px',
+                borderRadius: '4px',
                 display: 'inline-flex',
                 alignItems: 'center',
-                gap: '4px',
+                gap: '3px',
                 background: parsed.type === 'income'
                   ? 'rgba(16, 185, 129, 0.15)'
                   : parsed.type === 'transfer'
@@ -186,68 +227,53 @@ export default function QuickTextInput({
                   ? 'var(--saving-color)'
                   : 'var(--expense-color)'
               }}>
-                {parsed.type === 'income' ? <TrendingUp size={12} /> : parsed.type === 'transfer' ? <ArrowRightLeft size={12} /> : <TrendingDown size={12} />}
+                {parsed.type === 'income' ? <TrendingUp size={11} /> : parsed.type === 'transfer' ? <ArrowRightLeft size={11} /> : <TrendingDown size={11} />}
                 {parsed.type === 'income' ? 'Pemasukan' : parsed.type === 'transfer' ? 'Transfer' : 'Pengeluaran'}
               </span>
 
               {/* Nominal Badge */}
               <span style={{
-                fontSize: '0.75rem',
+                fontSize: '0.7rem',
                 fontWeight: 700,
-                padding: '4px 8px',
-                borderRadius: '6px',
+                padding: '3px 6px',
+                borderRadius: '4px',
                 background: parsed.amount > 0 ? 'rgba(99, 102, 241, 0.15)' : 'rgba(148, 163, 184, 0.1)',
                 color: parsed.amount > 0 ? 'var(--accent-color)' : 'var(--text-secondary)'
               }}>
-                {parsed.amount > 0 ? formatAmount(parsed.amount) : 'Nominal belum terdeteksi'}
+                {parsed.amount > 0 ? formatAmount(parsed.amount) : 'Nominal...'}
               </span>
 
               {/* Kategori Badge */}
               {parsed.type !== 'transfer' && (
                 <span style={{
-                  fontSize: '0.75rem',
-                  padding: '4px 8px',
-                  borderRadius: '6px',
+                  fontSize: '0.7rem',
+                  padding: '3px 6px',
+                  borderRadius: '4px',
                   background: 'rgba(148, 163, 184, 0.1)',
                   color: 'var(--text-primary)',
                   display: 'inline-flex',
                   alignItems: 'center',
-                  gap: '4px'
+                  gap: '3px'
                 }}>
-                  <Tag size={11} />
+                  <Tag size={10} />
                   {parsed.category}
                 </span>
               )}
 
               {/* Dompet Sumber Badge */}
               <span style={{
-                fontSize: '0.75rem',
-                padding: '4px 8px',
-                borderRadius: '6px',
+                fontSize: '0.7rem',
+                padding: '3px 6px',
+                borderRadius: '4px',
                 background: 'rgba(148, 163, 184, 0.1)',
                 color: 'var(--text-primary)',
                 display: 'inline-flex',
                 alignItems: 'center',
-                gap: '4px'
+                gap: '3px'
               }}>
-                <Wallet size={11} />
-                {parsed.sourceWalletName || 'Dompet Utama'}
+                <Wallet size={10} />
+                {parsed.sourceWalletName || 'Dompet'}
                 {parsed.type === 'transfer' && parsed.targetWalletName && ` ➔ ${parsed.targetWalletName}`}
-              </span>
-
-              {/* Tanggal Badge */}
-              <span style={{
-                fontSize: '0.75rem',
-                padding: '4px 8px',
-                borderRadius: '6px',
-                background: 'rgba(148, 163, 184, 0.1)',
-                color: 'var(--text-secondary)',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '4px'
-              }}>
-                <Calendar size={11} />
-                {parsed.date}
               </span>
             </div>
 
@@ -260,19 +286,16 @@ export default function QuickTextInput({
                   background: 'transparent',
                   border: '1px solid var(--border-color)',
                   color: 'var(--text-secondary)',
-                  fontSize: '0.75rem',
-                  padding: '6px 10px',
-                  minHeight: '40px',
-                  borderRadius: '6px',
+                  fontSize: '0.7rem',
+                  padding: '4px 8px',
+                  borderRadius: '4px',
                   cursor: 'pointer',
                   display: 'inline-flex',
                   alignItems: 'center',
                   transition: 'all 0.15s ease'
                 }}
-                onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--text-primary)'; e.currentTarget.style.borderColor = 'var(--accent-color)'; }}
-                onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-secondary)'; e.currentTarget.style.borderColor = 'var(--border-color)'; }}
               >
-                Buka di Form Detail ↗
+                Form Detail ↗
               </button>
             )}
           </div>

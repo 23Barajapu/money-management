@@ -903,26 +903,19 @@ export default function App() {
                 </div>
               </div>
 
-              {/* Card 3: Quick Actions */}
+              {/* Card 3: Quick Action / Input by Text */}
               <div className="card" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', fontWeight: 500 }}>{t('quickActions')}</span>
-                  <MoreHorizontal size={16} color="var(--text-secondary)" />
-                </div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.4rem', marginTop: '0.5rem' }}>
-                  <button onClick={() => { setSelectedFormType('income'); setActiveTab('transactions'); }} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.25rem', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border-color)', padding: '0.6rem 0.25rem', borderRadius: '8px', color: 'var(--text-primary)', fontSize: '0.7rem', cursor: 'pointer' }}>
-                    <Plus size={16} color="#10b981" />
-                    <span>Pemasukan</span>
-                  </button>
-                  <button onClick={() => { setSelectedFormType('expense'); setActiveTab('transactions'); }} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.25rem', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border-color)', padding: '0.6rem 0.25rem', borderRadius: '8px', color: 'var(--text-primary)', fontSize: '0.7rem', cursor: 'pointer' }}>
-                    <ArrowDownCircle size={16} color="#ef4444" />
-                    <span>Pengeluaran</span>
-                  </button>
-                  <button onClick={() => { setSelectedFormType('transfer'); setActiveTab('transactions'); }} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.25rem', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border-color)', padding: '0.6rem 0.25rem', borderRadius: '8px', color: 'var(--text-primary)', fontSize: '0.7rem', cursor: 'pointer' }}>
-                    <Send size={16} color="#06b6d4" />
-                    <span>Transfer</span>
-                  </button>
-                </div>
+                <QuickTextInput
+                  compact={true}
+                  onAddTransaction={handleAddTransaction}
+                  onOpenDetailedForm={(prefillData) => {
+                    setSelectedFormType(prefillData?.type || 'expense');
+                    setActiveTab('transactions');
+                  }}
+                  wallets={walletsWithUpdatedBalances}
+                  currency={currency}
+                  t={t}
+                />
               </div>
             </div>
 
@@ -934,18 +927,6 @@ export default function App() {
               cashBalance={cashBalance}
               cashlessBalance={cashlessBalance}
               formatIDR={formatIDR}
-              currency={currency}
-              t={t}
-            />
-
-            {/* Quick Text Transaction Input */}
-            <QuickTextInput
-              onAddTransaction={handleAddTransaction}
-              onOpenDetailedForm={(prefillData) => {
-                setSelectedFormType(prefillData?.type || 'expense');
-                setActiveTab('transactions');
-              }}
-              wallets={walletsWithUpdatedBalances}
               currency={currency}
               t={t}
             />

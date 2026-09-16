@@ -215,29 +215,58 @@ export default function TransactionForm({
 
   return (
     <div>
-      {/* Quick Text AI Input Widget (only when not in edit mode) */}
-      {!editingTransaction && (
+      {/* Quick Text AI Input Widget (when in quick mode and not editing) */}
+      {!editingTransaction && inputMode === 'quick' && (
         <QuickTextInput
           onAddTransaction={onAddTransaction}
           onOpenDetailedForm={handlePrefillFromQuickText}
+          onToggleMode={() => setInputMode('manual')}
           wallets={activeWallets}
           currency={currency}
           t={t}
         />
       )}
 
-      <div className="card">
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem' }}>
-          <h2 style={{ fontSize: '1.2rem', margin: 0, fontWeight: 600 }}>
-            {editingTransaction ? 'Edit Transaksi' : 'Form Detail Transaksi'}
-          </h2>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.8rem', color: editingTransaction ? '#818cf8' : 'var(--text-secondary)' }}>
-            <SlidersHorizontal size={14} />
-            <span>{editingTransaction ? 'Mode Edit' : 'Mode Manual'}</span>
+      {/* Manual Detail Form (when in manual mode or editing) */}
+      {(editingTransaction || inputMode === 'manual') && (
+        <div className="card">
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+            <h2 style={{ fontSize: '1.2rem', margin: 0, fontWeight: 600 }}>
+              {editingTransaction ? 'Edit Transaksi' : 'Form Detail Transaksi'}
+            </h2>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              {!editingTransaction && (
+                <button
+                  type="button"
+                  onClick={() => setInputMode('quick')}
+                  style={{
+                    background: 'rgba(99, 102, 241, 0.1)',
+                    border: '1px solid rgba(99, 102, 241, 0.3)',
+                    color: 'var(--accent-color)',
+                    padding: '0.35rem 0.75rem',
+                    borderRadius: '20px',
+                    fontSize: '0.75rem',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '0.35rem',
+                    transition: 'all 0.2s ease'
+                  }}
+                >
+                  <Sparkles size={13} />
+                  <span>Ganti ke Mode Otomatis (Teks)</span>
+                </button>
+              )}
+              {editingTransaction && (
+                <span style={{ fontSize: '0.8rem', color: '#818cf8', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                  <SlidersHorizontal size={14} /> Mode Edit
+                </span>
+              )}
+            </div>
           </div>
-        </div>
 
-        <form onSubmit={handleSubmit}>
+          <form onSubmit={handleSubmit}>
           <div className="btn-group">
             <button
               type="button"
