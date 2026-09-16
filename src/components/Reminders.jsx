@@ -41,6 +41,75 @@ export default function Reminders({ onAddTransaction, formatIDR, wallets = [], i
     fetchData();
   }, []);
 
+  const advanceMonth = (dateStr) => {
+    if (!dateStr) return new Date().toISOString().split('T')[0];
+    const [year, month, day] = dateStr.split('-').map(Number);
+    const targetDate = new Date(year, month - 1 + 1, day);
+    if (targetDate.getDate() !== day) {
+      targetDate.setDate(0);
+    }
+    const y = targetDate.getFullYear();
+    const m = String(targetDate.getMonth() + 1).padStart(2, '0');
+    const d = String(targetDate.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  };
+
+  const syncMonthlyBills = async (rawBills, userId) => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const currentMonthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+
+    const updatedBills = [];
+    const dbUpdates = [];
+
+    for (const b of rawBills) {
+      if (!b.due_date) {
+        updatedBills.push(b);
+        continue;
+      }
+
+      let currentDue = b.due_date;
+      let isPaid = b.is_paid;
+      let changed = false;
+
+      // Roll forward if marked paid and past, or if due date is from older months
+      const [year, month, day] = currentDue.split('-').map(Number);
+      let dueDateObj = new Date(year, month - 1, day);
+
+      while (isPaid && dueDateObj < today) {
+        currentDue = advanceMonth(currentDue);
+        const [y, m, d] = currentDue.split('-').map(Number);
+        dueDateObj = new Date(y, m - 1, d);
+        isPaid = false;
+        changed = true;
+      }
+
+      while (dueDateObj < currentMonthStart) {
+        currentDue = advanceMonth(currentDue);
+        const [y, m, d] = currentDue.split('-').map(Number);
+        dueDateObj = new Date(y, m - 1, d);
+        isPaid = false;
+        changed = true;
+      }
+
+      if (changed) {
+        dbUpdates.push(
+          supabase.from('bills').update({ due_date: currentDue, is_paid: isPaid }).eq('id', b.id)
+        );
+        updatedBills.push({ ...b, due_date: currentDue, is_paid: isPaid });
+      } else {
+        updatedBills.push(b);
+      }
+    }
+
+    if (dbUpdates.length > 0) {
+      await Promise.all(dbUpdates);
+      if (fetchUserData) fetchUserData();
+    }
+
+    return updatedBills;
+  };
+
   const fetchData = async () => {
     try {
       setLoading(true);
@@ -55,8 +124,10 @@ export default function Reminders({ onAddTransaction, formatIDR, wallets = [], i
       if (recRes.error) throw recRes.error;
       if (billsRes.error) throw billsRes.error;
 
+      const syncedBills = await syncMonthlyBills(billsRes.data || [], user.id);
+
       setRecurrings(recRes.data || []);
-      setBills(billsRes.data || []);
+      setBills(syncedBills);
 
       // Trigger automatic recurring checking on load
       checkAndTriggerRecurring(recRes.data || [], user.id);

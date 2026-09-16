@@ -149,13 +149,61 @@ export default function App() {
         monthlyPayment: parseFloat(inst.monthly_payment)
       })));
 
-      // 4. Fetch bills for notifications (H-5)
+      // 4. Fetch bills for notifications (H-5) & auto sync to current month
       const { data: billsData } = await supabase
         .from('bills')
         .select('*')
         .eq('user_id', userId)
         .order('due_date', { ascending: true });
-      setBills(billsData || []);
+
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const currentMonthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+
+      const advanceDateMonth = (dateStr) => {
+        if (!dateStr) return new Date().toISOString().split('T')[0];
+        const [year, month, day] = dateStr.split('-').map(Number);
+        const targetDate = new Date(year, month - 1 + 1, day);
+        if (targetDate.getDate() !== day) targetDate.setDate(0);
+        const y = targetDate.getFullYear();
+        const m = String(targetDate.getMonth() + 1).padStart(2, '0');
+        const d = String(targetDate.getDate()).padStart(2, '0');
+        return `${y}-${m}-${d}`;
+      };
+
+      const syncedBills = (billsData || []).map(b => {
+        if (!b.due_date) return b;
+        let currentDue = b.due_date;
+        let isPaid = b.is_paid;
+        let changed = false;
+
+        const [year, month, day] = currentDue.split('-').map(Number);
+        let dueDateObj = new Date(year, month - 1, day);
+
+        while (isPaid && dueDateObj < today) {
+          currentDue = advanceDateMonth(currentDue);
+          const [y, m, d] = currentDue.split('-').map(Number);
+          dueDateObj = new Date(y, m - 1, d);
+          isPaid = false;
+          changed = true;
+        }
+
+        while (dueDateObj < currentMonthStart) {
+          currentDue = advanceDateMonth(currentDue);
+          const [y, m, d] = currentDue.split('-').map(Number);
+          dueDateObj = new Date(y, m - 1, d);
+          isPaid = false;
+          changed = true;
+        }
+
+        if (changed) {
+          supabase.from('bills').update({ due_date: currentDue, is_paid: isPaid }).eq('id', b.id).then();
+          return { ...b, due_date: currentDue, is_paid: isPaid };
+        }
+        return b;
+      });
+
+      setBills(syncedBills);
 
       // 5. Fetch wallets
       const { data: wlData, error: wlErr } = await supabase
